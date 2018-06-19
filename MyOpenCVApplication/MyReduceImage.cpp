@@ -351,5 +351,5 @@ void MyReduceImage::UseHoughCircles(const Mat& I, Mat& J)
 
 void MyReduceImage::UseRectangle(Mat& I, Point s, Point e)
 {
-	rectangle(I, s, e, Scalar(0, 0, 255),4,8,0);
+	rectangle(I, s, e, Scalar(0, 0, 255),2,8,0);
 }

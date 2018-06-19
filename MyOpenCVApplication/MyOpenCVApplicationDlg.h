@@ -130,4 +130,6 @@ public:
 	void DrawRectangle();
 	afx_msg void OnCutMat();
 	afx_msg void OnContextMenu(CWnd* /*pWnd*/, CPoint /*point*/);
+	afx_msg void OnCopyCoordinate();
+	afx_msg void OnHandlePart();
 };

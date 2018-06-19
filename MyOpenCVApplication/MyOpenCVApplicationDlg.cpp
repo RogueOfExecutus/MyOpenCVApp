@@ -109,6 +109,8 @@ BEGIN_MESSAGE_MAP(CMyOpenCVApplicationDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON3, &CMyOpenCVApplicationDlg::OnBnClickedButton3)
 	ON_COMMAND(ID_CUT_MAT, &CMyOpenCVApplicationDlg::OnCutMat)
 	ON_WM_CONTEXTMENU()
+	ON_COMMAND(ID_COPY_COORDINATE, &CMyOpenCVApplicationDlg::OnCopyCoordinate)
+	ON_COMMAND(ID_HANDLE_PART, &CMyOpenCVApplicationDlg::OnHandlePart)
 END_MESSAGE_MAP()
 
 
@@ -876,7 +878,7 @@ void on_mouse(int event, int x, int y, int flags, void *ustc)
 	}
 	if (event == CV_EVENT_MOUSEMOVE && (flags & CV_EVENT_FLAG_LBUTTON))
 	{
-		if (x != thisDlg->GetSPt().x || y != thisDlg->GetSPt().y) 
+		if (x != thisDlg->GetSPt().x && y != thisDlg->GetSPt().y) 
 		{
 			thisDlg->SetEPt(x, y);
 			thisDlg->DrawRectangle();
@@ -884,7 +886,7 @@ void on_mouse(int event, int x, int y, int flags, void *ustc)
 	}
 	if (event == CV_EVENT_LBUTTONUP)
 	{
-		if (x != thisDlg->GetSPt().x || y != thisDlg->GetSPt().y)
+		if (x != thisDlg->GetSPt().x && y != thisDlg->GetSPt().y)
 		{
 			thisDlg->SetEPt(x, y);
 			thisDlg->DrawRectangle();
@@ -928,12 +930,7 @@ void CMyOpenCVApplicationDlg::DrawRectangle()
 void CMyOpenCVApplicationDlg::OnCutMat()
 {
 	// TODO: 在此添加命令处理程序代码
-	/*int cx = image_r.cols / 2;
-	int cy = image_r.rows / 2;
-	Mat q0(image_r, Rect(0, 0, cx, cy));
-	reduceImage.UseRectangle(q0, Point(10,10), Point(100,100));
-	imshow(showWindowName, image_r);*/
-	Mat temp(image_r, Rect(s_pt.x, s_pt.y, e_pt.x - s_pt.x, e_pt.y - s_pt.y));
+	Mat temp(image_r, Rect(min(s_pt.x, e_pt.x), min(s_pt.y, e_pt.y), abs(e_pt.x - s_pt.x), abs(e_pt.y - s_pt.y)));
 	temp.copyTo(image_s);
 	imshow(showWindowName, image_s);
 }
@@ -954,4 +951,36 @@ void CMyOpenCVApplicationDlg::OnContextMenu(CWnd* /*pWnd*/, CPoint point)
 
 		pPopup->TrackPopupMenu(TPM_LEFTALIGN | TPM_LEFTBUTTON, point.x, point.y, this); //在鼠标当前位置显示指定菜单
 	}
+}
+
+
+void CMyOpenCVApplicationDlg::OnCopyCoordinate()
+{
+	// TODO: 在此添加命令处理程序代码
+	if (OpenClipboard())
+	{
+		EmptyClipboard();
+		CString str;
+		str.Format(_T("(%d,%d),(%d,%d)"), min(s_pt.x, e_pt.x), min(s_pt.y, e_pt.y), max(s_pt.x, e_pt.x), max(s_pt.y, e_pt.y));
+		HANDLE hClip = GlobalAlloc(GMEM_MOVEABLE, str.GetLength() + 1);
+		USES_CONVERSION;
+		//GlobalLock(hClip) = T2A(str);
+		char * pFileName = T2A(str);
+		strcpy_s((char *)GlobalLock(hClip),str.GetLength()+1, pFileName);
+		GlobalUnlock(hClip);//解锁  
+		SetClipboardData(CF_TEXT, hClip);//设置格式  
+		CloseClipboard();
+	}
+}
+
+
+void CMyOpenCVApplicationDlg::OnHandlePart()
+{
+	// TODO: 在此添加命令处理程序代码
+	Mat temp;
+	Mat p0(image_r, Rect(min(s_pt.x, e_pt.x), min(s_pt.y, e_pt.y), abs(e_pt.x - s_pt.x), abs(e_pt.y - s_pt.y)));
+	image_r.copyTo(temp);
+	p0.copyTo(image_r);
+	OnBnClickedOk();
+	temp.copyTo(image_r);
 }
