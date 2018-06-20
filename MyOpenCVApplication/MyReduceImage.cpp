@@ -348,8 +348,56 @@ void MyReduceImage::UseHoughCircles(const Mat& I, Mat& J)
 	}
 }
 
-
+//ª≠æÿ–Œ
 void MyReduceImage::UseRectangle(Mat& I, Point s, Point e)
 {
 	rectangle(I, s, e, Scalar(0, 0, 255),2,8,0);
+}
+
+
+// ÷ÿ”≥…‰æÿ’Û
+void MyReduceImage::update_map(int type, float rows, float cols)
+{
+	for (int j = 0; j < rows; j++)
+	{
+		for (int i = 0; i < cols; i++)
+		{
+			switch (type)
+			{
+			case 0:
+				if (i > cols*0.25 && i < cols*0.75 && j > rows*0.25 && j < rows*0.75)
+				{
+					map_x.at<float>(j, i) = 2 * (i - cols*0.25) + 0.5;
+					map_y.at<float>(j, i) = 2 * (j - rows*0.25) + 0.5;
+				}
+				else
+				{
+					map_x.at<float>(j, i) = 0;
+					map_y.at<float>(j, i) = 0;
+				}
+				break;
+			case 1:
+				map_x.at<float>(j, i) = i;
+				map_y.at<float>(j, i) = rows - j;
+				break;
+			case 2:
+				map_x.at<float>(j, i) = cols - i;
+				map_y.at<float>(j, i) = j;
+				break;
+			case 3:
+				map_x.at<float>(j, i) = cols - i;
+				map_y.at<float>(j, i) = rows - j;
+				break;
+			} // end of switch
+		}
+	}
+}
+
+//÷ÿ”≥…‰
+void MyReduceImage::UseRemap(const Mat& I, Mat& J, int type)
+{
+	map_x.create(I.size(), CV_32FC1);
+	map_y.create(I.size(), CV_32FC1);
+	update_map(type,I.rows,I.cols);
+	remap(I, J, map_x, map_y, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
 }

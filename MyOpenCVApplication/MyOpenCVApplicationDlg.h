@@ -132,4 +132,9 @@ public:
 	afx_msg void OnContextMenu(CWnd* /*pWnd*/, CPoint /*point*/);
 	afx_msg void OnCopyCoordinate();
 	afx_msg void OnHandlePart();
+private:
+	// 显示重映射选项
+	void ShowMethodFifteen();
+	// 隐藏重映射选项
+	void HideMethodFifteen();
 };

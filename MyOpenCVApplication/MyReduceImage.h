@@ -5,6 +5,11 @@ using namespace cv;
 
 class MyReduceImage
 {
+private:
+	// ÷ÿ”≥…‰æÿ’Û
+	void update_map(int type, float rows, float cols);
+	Mat map_x;
+	Mat map_y;
 public:
 	MyReduceImage();
 	MyReduceImage(int inputDivideWith);
@@ -38,6 +43,9 @@ public:
 	void UseHoughLines(const Mat& I, Mat& J, int method);
 	// ªÙ∑Ú‘≤±‰ªª
 	void UseHoughCircles(const Mat& I, Mat& J);
+	//ª≠æÿ–Œ
 	void UseRectangle(Mat& I, Point s, Point e);
+	//÷ÿ”≥…‰
+	void UseRemap(const Mat& I, Mat& J, int type);
 };
 

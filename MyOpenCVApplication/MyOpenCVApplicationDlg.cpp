@@ -20,7 +20,6 @@ using namespace std;
 void on_mouse(int mouse_event, int x, int y, int flags, void *ustc);
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
-HWND hWnd;
 CMyOpenCVApplicationDlg *thisDlg;
 
 class CAboutDlg : public CDialogEx
@@ -162,7 +161,8 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(11, _T("边缘检测"));
 	selectMethod.InsertString(12, _T("霍夫线变换"));
 	selectMethod.InsertString(13, _T("霍夫圆变换"));
-	selectMethod.InsertString(14, _T("不处理"));
+	selectMethod.InsertString(14, _T("重映射"));
+	selectMethod.InsertString(15, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -171,7 +171,6 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	m_spin_one.SetBase(10);//设置进制数,只能是10进制和16进制
 	m_num_edit.SetWindowText(_T("8"));
 
-	hWnd = AfxGetMainWnd()->m_hWnd;
 	thisDlg = this;
 	//创建源图片窗口
 	namedWindow(readWindowName, WINDOW_NORMAL);
@@ -414,6 +413,12 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 	case 13:
 		reduceImage.UseHoughCircles(image_r, J);
 		break;
+	case 14:
+	{
+		J = Mat::zeros(image_r.size(), image_r.type());
+		reduceImage.UseRemap(image_r, J, method_one_selecter.GetCurSel());
+	}
+		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -478,6 +483,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 13:
 		HideMethodFourteen();
 		break;
+	case 14:
+		HideMethodFifteen();
+		break;
 	default:
 		break;
 	}
@@ -535,6 +543,10 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 13:
 		ShowMethodFourteen();
 		m_last_spin_num = 13;
+		break;
+	case 14:
+		ShowMethodFifteen();
+		m_last_spin_num = 14;
 		break;
 	default:
 		break;
@@ -964,9 +976,7 @@ void CMyOpenCVApplicationDlg::OnCopyCoordinate()
 		str.Format(_T("(%d,%d),(%d,%d)"), min(s_pt.x, e_pt.x), min(s_pt.y, e_pt.y), max(s_pt.x, e_pt.x), max(s_pt.y, e_pt.y));
 		HANDLE hClip = GlobalAlloc(GMEM_MOVEABLE, str.GetLength() + 1);
 		USES_CONVERSION;
-		//GlobalLock(hClip) = T2A(str);
-		char * pFileName = T2A(str);
-		strcpy_s((char *)GlobalLock(hClip),str.GetLength()+1, pFileName);
+		strcpy_s((char *)GlobalLock(hClip),str.GetLength()+1, T2A(str));
 		GlobalUnlock(hClip);//解锁  
 		SetClipboardData(CF_TEXT, hClip);//设置格式  
 		CloseClipboard();
@@ -983,4 +993,24 @@ void CMyOpenCVApplicationDlg::OnHandlePart()
 	p0.copyTo(image_r);
 	OnBnClickedOk();
 	temp.copyTo(image_r);
+}
+
+
+// 显示重映射选项
+void CMyOpenCVApplicationDlg::ShowMethodFifteen()
+{
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.InsertString(0, _T("缩小一半居中显示"));
+	method_one_selecter.InsertString(1, _T("上下颠倒"));
+	method_one_selecter.InsertString(2, _T("左右颠倒"));
+	method_one_selecter.InsertString(3, _T("上下左右颠倒"));
+	method_one_selecter.SetCurSel(0);
+}
+
+
+// 隐藏重映射选项
+void CMyOpenCVApplicationDlg::HideMethodFifteen()
+{
+	method_one_selecter.ShowWindow(SW_HIDE);
+	method_one_selecter.ResetContent();
 }
