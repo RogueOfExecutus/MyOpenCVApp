@@ -47,5 +47,9 @@ public:
 	void UseRectangle(Mat& I, Point s, Point e);
 	//重映射
 	void UseRemap(const Mat& I, Mat& J, int type);
+	//放射变换
+	void UseWarpAffine(const Mat& I, Mat& J);
+	// 旋转图片（放射变换法）
+	void RotateImage(const Mat& I, Mat& J, double angle);
 };
 

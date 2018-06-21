@@ -137,4 +137,8 @@ private:
 	void ShowMethodFifteen();
 	// 隐藏重映射选项
 	void HideMethodFifteen();
+	// 显示旋转图片选项
+	void ShowMethodSeventeen();
+	// 隐藏旋转图片选项
+	void HideMethodSeventeen();
 };

@@ -401,3 +401,33 @@ void MyReduceImage::UseRemap(const Mat& I, Mat& J, int type)
 	update_map(type,I.rows,I.cols);
 	remap(I, J, map_x, map_y, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
 }
+
+//放射变换
+void MyReduceImage::UseWarpAffine(const Mat& I, Mat& J)
+{
+	Point2f srcTri[3];
+	Point2f dstTri[3];
+
+	srcTri[0] = Point2f(0, 0);
+	srcTri[1] = Point2f(I.cols - 1, 0);
+	srcTri[2] = Point2f(0, I.rows - 1);
+
+	dstTri[0] = Point2f(I.cols*0.0, I.rows*0.33);
+	dstTri[1] = Point2f(I.cols*0.85, I.rows*0.25);
+	dstTri[2] = Point2f(I.cols*0.15, I.rows*0.7);
+
+	Mat warp_mat(2, 3, CV_32FC1);
+	warp_mat = getAffineTransform(srcTri, dstTri);
+
+	warpAffine(I, J, warp_mat, J.size());
+}
+
+
+// 旋转图片（放射变换法）
+void MyReduceImage::RotateImage(const Mat& I, Mat& J, double angle)
+{
+	Point center = Point(I.cols / 2, I.rows / 2);
+	Mat rot_mat(2, 3, CV_32FC1);
+	rot_mat = getRotationMatrix2D(center, angle, 1);
+	warpAffine(I, J, rot_mat, I.size());
+}

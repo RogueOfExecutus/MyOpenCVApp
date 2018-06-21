@@ -162,12 +162,14 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(12, _T("霍夫线变换"));
 	selectMethod.InsertString(13, _T("霍夫圆变换"));
 	selectMethod.InsertString(14, _T("重映射"));
-	selectMethod.InsertString(15, _T("不处理"));
+	selectMethod.InsertString(15, _T("仿射变换"));
+	selectMethod.InsertString(16, _T("旋转图像（仿射）"));
+	selectMethod.InsertString(17, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
 	method_one_selecter.SetCurSel(0);
-	m_spin_one.SetRange32(1, 256);//表示数值只能在1到16内变化
+	m_spin_one.SetRange32(1, 256);//表示数值只能在1到256内变化
 	m_spin_one.SetBase(10);//设置进制数,只能是10进制和16进制
 	m_num_edit.SetWindowText(_T("8"));
 
@@ -414,9 +416,19 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		reduceImage.UseHoughCircles(image_r, J);
 		break;
 	case 14:
-	{
 		J = Mat::zeros(image_r.size(), image_r.type());
 		reduceImage.UseRemap(image_r, J, method_one_selecter.GetCurSel());
+		break;
+	case 15:
+		J = Mat::zeros(image_r.size(), image_r.type());
+		reduceImage.UseWarpAffine(image_r, J);
+		break;
+	case 16:
+	{
+		CString str0;
+		m_num_edit.GetWindowTextW(str0);
+		double angle = _ttof(str0);
+		reduceImage.RotateImage(image_r, J, angle);
 	}
 		break;
 	default:
@@ -486,6 +498,11 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 14:
 		HideMethodFifteen();
 		break;
+	case 15:
+		break;
+	case 16:
+		HideMethodSeventeen();
+		break;
 	default:
 		break;
 	}
@@ -547,6 +564,13 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 14:
 		ShowMethodFifteen();
 		m_last_spin_num = 14;
+		break;
+	case 15:
+		m_last_spin_num = 15;
+		break;
+	case 16:
+		ShowMethodSeventeen();
+		m_last_spin_num = 16;
 		break;
 	default:
 		break;
@@ -1013,4 +1037,22 @@ void CMyOpenCVApplicationDlg::HideMethodFifteen()
 {
 	method_one_selecter.ShowWindow(SW_HIDE);
 	method_one_selecter.ResetContent();
+}
+
+
+// 显示旋转图片选项
+void CMyOpenCVApplicationDlg::ShowMethodSeventeen()
+{
+	m_num_edit.ShowWindow(SW_SHOW);
+	m_spin_one.ShowWindow(SW_SHOW);
+	m_spin_one.SetRange32(-360, 360);
+}
+
+
+// 隐藏旋转图片选项
+void CMyOpenCVApplicationDlg::HideMethodSeventeen()
+{
+	m_num_edit.ShowWindow(SW_HIDE);
+	m_spin_one.ShowWindow(SW_HIDE);
+	m_spin_one.SetRange32(1, 256);//表示数值只能在1到256内变化
 }
