@@ -431,3 +431,18 @@ void MyReduceImage::RotateImage(const Mat& I, Mat& J, double angle)
 	rot_mat = getRotationMatrix2D(center, angle, 1);
 	warpAffine(I, J, rot_mat, I.size());
 }
+
+
+// 直方图均衡化
+void MyReduceImage::UseEqualizeHist(const Mat& I, Mat& J)
+{
+	Mat temp;
+	if (I.channels() != 1) {
+		cvtColor(I, temp, CV_BGR2GRAY);
+	}
+	else
+	{
+		I.copyTo(temp);
+	}
+	equalizeHist(temp, J);
+}

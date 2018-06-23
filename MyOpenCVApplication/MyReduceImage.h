@@ -51,5 +51,7 @@ public:
 	void UseWarpAffine(const Mat& I, Mat& J);
 	// 旋转图片（放射变换法）
 	void RotateImage(const Mat& I, Mat& J, double angle);
+	// 直方图均衡化
+	void UseEqualizeHist(const Mat& I, Mat& J);
 };
 

@@ -164,7 +164,8 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(14, _T("重映射"));
 	selectMethod.InsertString(15, _T("仿射变换"));
 	selectMethod.InsertString(16, _T("旋转图像（仿射）"));
-	selectMethod.InsertString(17, _T("不处理"));
+	selectMethod.InsertString(17, _T("直方图均衡化"));
+	selectMethod.InsertString(18, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -431,6 +432,9 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		reduceImage.RotateImage(image_r, J, angle);
 	}
 		break;
+	case 17:
+		reduceImage.UseEqualizeHist(image_r, J);
+		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -503,6 +507,8 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 16:
 		HideMethodSeventeen();
 		break;
+	case 17:
+		break;
 	default:
 		break;
 	}
@@ -571,6 +577,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 16:
 		ShowMethodSeventeen();
 		m_last_spin_num = 16;
+		break;
+	case 17:
+		m_last_spin_num = 17;
 		break;
 	default:
 		break;
