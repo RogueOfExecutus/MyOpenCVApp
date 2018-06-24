@@ -446,3 +446,89 @@ void MyReduceImage::UseEqualizeHist(const Mat& I, Mat& J)
 	}
 	equalizeHist(temp, J);
 }
+
+//直方图计算
+void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int& bins)
+{
+	int len = I.channels();
+	int* histSize = new int[len];
+	int* channels = new int[len];
+	// 设定取值范围
+	float range_b[] = { 0, 255 };
+	float range_g[] = { 0, 180 };
+	float range_r[] = { 0, 256 };
+	const float* histRange_gray = range_b;
+	const float* histRange_bgr[] = { range_g, range_r };
+	for (int i = 0; i < len; i++)
+	{
+		if (i == 2)
+			break;
+		channels[i] = i;
+		histSize[i] = bins;
+	}
+
+	bool uniform = true, accumulate = false;
+
+	switch (len)
+	{
+	case 1:
+		calcHist(&I, 1, channels, Mat(), J, 1, histSize, &histRange_gray, uniform, accumulate);
+		break;
+	case 3:
+	{
+		Mat hsv;
+		cvtColor(I, hsv, CV_BGR2HSV);
+		calcHist(&hsv, 1, channels, Mat(), J, 2, histSize, histRange_bgr, uniform, accumulate);
+	}
+		break;
+	default:
+		break;
+	}
+
+
+	// 在直方图画布上画出直方图
+	switch (len)
+	{
+	case 1:
+	{
+		// 创建直方图画布
+		int hist_w = 512; int hist_h = 512;
+		int bin_w = cvRound((double)hist_w / bins);
+
+		Mat histImage(hist_w, hist_h, CV_8UC3, Scalar(0, 0, 0));
+
+		normalize(J, J, 0, histImage.rows, NORM_MINMAX, -1, Mat());
+		for (int i = 1; i < bins; i++)
+		{
+			line(histImage, Point(bin_w*(i - 1), hist_h - cvRound(J.at<float>(i - 1))),
+				Point(bin_w*(i), hist_h - cvRound(J.at<float>(i))),
+				Scalar(0, 255, 0), 2, 8, 0);
+		}
+		histImage.copyTo(J);
+	}
+		break;
+	case 3:
+	{
+		double maxVal = 0;
+		minMaxLoc(J, 0, &maxVal, 0, 0);
+
+		int scale = 10;
+		Mat histImg = Mat::zeros(bins*scale, bins * 10, CV_8UC3);
+		for (int h = 0; h < bins; h++)
+			for (int s = 0; s < bins; s++)
+			{
+				float binVal = J.at<float>(h, s);
+				int intensity = cvRound(binVal * 255 / maxVal);
+				rectangle(histImg, Point(h*scale, s*scale),
+					Point((h + 1)*scale - 1, (s + 1)*scale - 1),
+					Scalar::all(intensity),
+					CV_FILLED);
+			}
+		histImg.copyTo(J);
+	}
+		break;
+	default:
+		break;
+	}
+	
+}

@@ -141,4 +141,7 @@ private:
 	void ShowMethodSeventeen();
 	// 隐藏旋转图片选项
 	void HideMethodSeventeen();
+	// 显示直方图计算方法
+	void ShowMethodNineteen();
+	void HideMethodNineteen();
 };

@@ -165,12 +165,13 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(15, _T("仿射变换"));
 	selectMethod.InsertString(16, _T("旋转图像（仿射）"));
 	selectMethod.InsertString(17, _T("直方图均衡化"));
-	selectMethod.InsertString(18, _T("不处理"));
+	selectMethod.InsertString(18, _T("直方图计算"));
+	selectMethod.InsertString(19, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
 	method_one_selecter.SetCurSel(0);
-	m_spin_one.SetRange32(1, 256);//表示数值只能在1到256内变化
+	m_spin_one.SetRange32(0, 255);//表示数值只能在0到255内变化
 	m_spin_one.SetBase(10);//设置进制数,只能是10进制和16进制
 	m_num_edit.SetWindowText(_T("8"));
 
@@ -435,6 +436,14 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 	case 17:
 		reduceImage.UseEqualizeHist(image_r, J);
 		break;
+	case 18:
+	{
+		CString str0;
+		m_num_edit.GetWindowTextW(str0);
+		int bins = _ttoi(str0);
+		reduceImage.UseCalcHistAndDraw(image_r, J, bins);
+	}
+		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -509,6 +518,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		break;
 	case 17:
 		break;
+	case 18:
+		HideMethodNineteen();
+		break;
 	default:
 		break;
 	}
@@ -580,6 +592,10 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		break;
 	case 17:
 		m_last_spin_num = 17;
+		break;
+	case 18:
+		ShowMethodNineteen();
+		m_last_spin_num = 18;
 		break;
 	default:
 		break;
@@ -1063,5 +1079,22 @@ void CMyOpenCVApplicationDlg::HideMethodSeventeen()
 {
 	m_num_edit.ShowWindow(SW_HIDE);
 	m_spin_one.ShowWindow(SW_HIDE);
-	m_spin_one.SetRange32(1, 256);//表示数值只能在1到256内变化
+	m_spin_one.SetRange32(0, 255);//表示数值只能在1到256内变化
+}
+
+
+// 显示直方图计算方法
+void CMyOpenCVApplicationDlg::ShowMethodNineteen()
+{
+	m_num_edit.ShowWindow(SW_SHOW);
+	m_spin_one.ShowWindow(SW_SHOW);
+	m_spin_one.SetRange32(1, 256);
+}
+
+
+void CMyOpenCVApplicationDlg::HideMethodNineteen()
+{
+	m_num_edit.ShowWindow(SW_HIDE);
+	m_spin_one.ShowWindow(SW_HIDE);
+	m_spin_one.SetRange32(0, 255);//表示数值只能在1到256内变化
 }
