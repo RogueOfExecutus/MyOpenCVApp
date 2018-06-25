@@ -447,49 +447,16 @@ void MyReduceImage::UseEqualizeHist(const Mat& I, Mat& J)
 	equalizeHist(temp, J);
 }
 
-//直方图计算
-void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int& bins)
+//直方图绘画
+void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int bins)
 {
 	int len = I.channels();
-	int* histSize = new int[len];
-	int* channels = new int[len];
-	// 设定取值范围
-	float range_b[] = { 0, 255 };
-	float range_g[] = { 0, 180 };
-	float range_r[] = { 0, 256 };
-	const float* histRange_gray = range_b;
-	const float* histRange_bgr[] = { range_g, range_r };
-	for (int i = 0; i < len; i++)
-	{
-		if (i == 2)
-			break;
-		channels[i] = i;
-		histSize[i] = bins;
-	}
 
-	bool uniform = true, accumulate = false;
+	UseCalcHist(I, J, bins);
 
 	switch (len)
 	{
-	case 1:
-		calcHist(&I, 1, channels, Mat(), J, 1, histSize, &histRange_gray, uniform, accumulate);
-		break;
-	case 3:
-	{
-		Mat hsv;
-		cvtColor(I, hsv, CV_BGR2HSV);
-		calcHist(&hsv, 1, channels, Mat(), J, 2, histSize, histRange_bgr, uniform, accumulate);
-	}
-		break;
-	default:
-		break;
-	}
-
-
-	// 在直方图画布上画出直方图
-	switch (len)
-	{
-	case 1:
+	case 1: 
 	{
 		// 创建直方图画布
 		int hist_w = 512; int hist_h = 512;
@@ -509,13 +476,15 @@ void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int& bins)
 		break;
 	case 3:
 	{
+		int h_bins = 30, s_bins = bins;
+
 		double maxVal = 0;
 		minMaxLoc(J, 0, &maxVal, 0, 0);
 
 		int scale = 10;
-		Mat histImg = Mat::zeros(bins*scale, bins * 10, CV_8UC3);
-		for (int h = 0; h < bins; h++)
-			for (int s = 0; s < bins; s++)
+		Mat histImg = Mat::zeros(s_bins*scale, h_bins * 10, CV_8UC3);
+		for (int h = 0; h < h_bins; h++)
+			for (int s = 0; s < s_bins; s++)
 			{
 				float binVal = J.at<float>(h, s);
 				int intensity = cvRound(binVal * 255 / maxVal);
@@ -530,5 +499,60 @@ void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int& bins)
 	default:
 		break;
 	}
-	
+}
+
+
+double MyReduceImage::UseCompareHist(const Mat& I, const Mat& J, int method)
+{
+	if(I.channels() != J.channels())
+		return 0.0;
+	Mat hist_i, hist_j;
+	UseCalcHist(I, hist_i, 32);
+	UseCalcHist(J, hist_j, 32);
+	return compareHist(hist_i, hist_j, method);
+}
+
+
+// 直方图计算
+void MyReduceImage::UseCalcHist(const Mat& I, Mat& J, int bins)
+{
+	int len = I.channels();
+
+	bool uniform = true, accumulate = false;
+
+	switch (len)
+	{
+	case 1:
+	{
+		// 每个特征空间 子区段 的数目
+		int histSize = bins;
+		// 设定取值范围
+		float range_b[] = { 0, 255 };
+		const float* histRange_gray = range_b;
+		calcHist(&I, 1, 0, Mat(), J, 1, &histSize, &histRange_gray, uniform, accumulate);
+	}
+		break;
+	case 3:
+	{
+		// 通道
+		int channels[] = { 0, 1 };
+		int h_bins = 30, s_bins = bins;
+		int histSize[] = { h_bins, s_bins };
+		// 设定取值范围
+		float h_range[] = { 0, 180 };
+		float s_range[] = { 0, 256 };
+		const float* histRange_bgr[] = { h_range , s_range };
+		Mat hsv;
+		MatND hist;
+		cvtColor(I, hsv, CV_BGR2HSV);
+		calcHist(&hsv, 1, channels, Mat(), hist, 2, histSize, histRange_bgr, uniform, accumulate);
+
+		normalize(hist, hist, 0, 1, NORM_MINMAX, -1, Mat());
+
+		hist.copyTo(J);
+	}
+		break;
+	default:
+		break;
+	}
 }

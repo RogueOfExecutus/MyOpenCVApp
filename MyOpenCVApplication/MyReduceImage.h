@@ -53,7 +53,12 @@ public:
 	void RotateImage(const Mat& I, Mat& J, double angle);
 	// 直方图均衡化
 	void UseEqualizeHist(const Mat& I, Mat& J);
+	// 直方图绘画
+	void UseCalcHistAndDraw(const Mat& I, Mat& J, int bins);
+	// 直方图对比
+	double UseCompareHist(const Mat& I, const Mat& J, int method);
+private:
 	// 直方图计算
-	void UseCalcHistAndDraw(const Mat& I, Mat& J, int& bins);
+	void UseCalcHist(const Mat& I, Mat& J, int bins);
 };
 

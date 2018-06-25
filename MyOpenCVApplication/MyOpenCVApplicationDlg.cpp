@@ -166,7 +166,8 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(16, _T("旋转图像（仿射）"));
 	selectMethod.InsertString(17, _T("直方图均衡化"));
 	selectMethod.InsertString(18, _T("直方图计算"));
-	selectMethod.InsertString(19, _T("不处理"));
+	selectMethod.InsertString(19, _T("直方图对比"));
+	selectMethod.InsertString(20, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -444,6 +445,17 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		reduceImage.UseCalcHistAndDraw(image_r, J, bins);
 	}
 		break;
+	case 19:
+	{
+		//第二图像路径
+		String imgFile = OpenImageFile();
+		J = imread(imgFile, CV_LOAD_IMAGE_COLOR);
+		double result = reduceImage.UseCompareHist(image_r, J, method_one_selecter.GetCurSel());
+		CString msg;
+		msg.Format(_T("对比结果：%lf"), result);
+		MessageBox(msg);
+	}
+		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -521,6 +533,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 18:
 		HideMethodNineteen();
 		break;
+	case 19:
+		HideMethodTwenty();
+		break;
 	default:
 		break;
 	}
@@ -596,6 +611,10 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 18:
 		ShowMethodNineteen();
 		m_last_spin_num = 18;
+		break;
+	case 19:
+		ShowMethodTwenty();
+		m_last_spin_num = 19;
 		break;
 	default:
 		break;
@@ -1091,10 +1110,30 @@ void CMyOpenCVApplicationDlg::ShowMethodNineteen()
 	m_spin_one.SetRange32(1, 256);
 }
 
-
+// 隐藏直方图计算方法
 void CMyOpenCVApplicationDlg::HideMethodNineteen()
 {
 	m_num_edit.ShowWindow(SW_HIDE);
 	m_spin_one.ShowWindow(SW_HIDE);
 	m_spin_one.SetRange32(0, 255);//表示数值只能在1到256内变化
+}
+
+
+// 展示直方图对比方法
+void CMyOpenCVApplicationDlg::ShowMethodTwenty()
+{
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.InsertString(0, _T("Correlation"));
+	method_one_selecter.InsertString(1, _T("Chi-square"));
+	method_one_selecter.InsertString(2, _T("Intersection"));
+	method_one_selecter.InsertString(3, _T("Bhattacharyya"));
+	method_one_selecter.SetCurSel(0);
+}
+
+
+// 隐藏直方图对比方法
+void CMyOpenCVApplicationDlg::HideMethodTwenty()
+{
+	method_one_selecter.ShowWindow(SW_HIDE);
+	method_one_selecter.ResetContent();
 }

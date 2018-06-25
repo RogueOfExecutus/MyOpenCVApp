@@ -143,5 +143,10 @@ private:
 	void HideMethodSeventeen();
 	// 显示直方图计算方法
 	void ShowMethodNineteen();
+	// 隐藏直方图计算方法
 	void HideMethodNineteen();
+	// 展示直方图对比方法
+	void ShowMethodTwenty();
+	// 隐藏直方图对比方法
+	void HideMethodTwenty();
 };
