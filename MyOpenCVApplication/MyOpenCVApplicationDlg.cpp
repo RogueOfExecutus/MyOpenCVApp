@@ -167,7 +167,8 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(17, _T("直方图均衡化"));
 	selectMethod.InsertString(18, _T("直方图计算"));
 	selectMethod.InsertString(19, _T("直方图对比"));
-	selectMethod.InsertString(20, _T("不处理"));
+	selectMethod.InsertString(20, _T("反射投影"));
+	selectMethod.InsertString(21, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -456,6 +457,17 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		MessageBox(msg);
 	}
 		break;
+	case 20:
+	{
+		//第二图像路径
+		String imgFile = OpenImageFile();
+		Mat _J = imread(imgFile, CV_LOAD_IMAGE_COLOR);
+		CString str0;
+		m_num_edit.GetWindowTextW(str0);
+		int bins = _ttoi(str0);
+		reduceImage.UseCalcBackProject(image_r, _J, J, 180, bins);
+	}
+		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -536,6 +548,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 19:
 		HideMethodTwenty();
 		break;
+	case 20:
+		HideMethodTwentyOne();
+		break;
 	default:
 		break;
 	}
@@ -615,6 +630,10 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 19:
 		ShowMethodTwenty();
 		m_last_spin_num = 19;
+		break;
+	case 20:
+		ShowMethodTwentyOne();
+		m_last_spin_num = 20;
 		break;
 	default:
 		break;
@@ -1136,4 +1155,22 @@ void CMyOpenCVApplicationDlg::HideMethodTwenty()
 {
 	method_one_selecter.ShowWindow(SW_HIDE);
 	method_one_selecter.ResetContent();
+}
+
+
+// 展示反射投影方法
+void CMyOpenCVApplicationDlg::ShowMethodTwentyOne()
+{
+	m_num_edit.ShowWindow(SW_SHOW);
+	m_spin_one.ShowWindow(SW_SHOW);
+	m_spin_one.SetRange32(1, 256);
+}
+
+
+// 隐藏反射投影方法
+void CMyOpenCVApplicationDlg::HideMethodTwentyOne()
+{
+	m_num_edit.ShowWindow(SW_HIDE);
+	m_spin_one.ShowWindow(SW_HIDE);
+	m_spin_one.SetRange32(0, 255);//表示数值只能在1到256内变化
 }

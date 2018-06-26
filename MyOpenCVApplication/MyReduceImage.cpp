@@ -452,7 +452,7 @@ void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int bins)
 {
 	int len = I.channels();
 
-	UseCalcHist(I, J, bins);
+	UseCalcHist(I, J, 30, bins);
 
 	switch (len)
 	{
@@ -476,6 +476,7 @@ void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int bins)
 		break;
 	case 3:
 	{
+		normalize(J, J, 0, 1, NORM_MINMAX, -1, Mat());
 		int h_bins = 30, s_bins = bins;
 
 		double maxVal = 0;
@@ -507,14 +508,14 @@ double MyReduceImage::UseCompareHist(const Mat& I, const Mat& J, int method)
 	if(I.channels() != J.channels())
 		return 0.0;
 	Mat hist_i, hist_j;
-	UseCalcHist(I, hist_i, 32);
-	UseCalcHist(J, hist_j, 32);
+	UseCalcHist(I, hist_i, 30,32);
+	UseCalcHist(J, hist_j, 30,32);
 	return compareHist(hist_i, hist_j, method);
 }
 
 
 // 直方图计算
-void MyReduceImage::UseCalcHist(const Mat& I, Mat& J, int bins)
+void MyReduceImage::UseCalcHist(const Mat& I, Mat& J, int hbins, int sbins)
 {
 	int len = I.channels();
 
@@ -525,7 +526,7 @@ void MyReduceImage::UseCalcHist(const Mat& I, Mat& J, int bins)
 	case 1:
 	{
 		// 每个特征空间 子区段 的数目
-		int histSize = bins;
+		int histSize = sbins;
 		// 设定取值范围
 		float range_b[] = { 0, 255 };
 		const float* histRange_gray = range_b;
@@ -536,7 +537,7 @@ void MyReduceImage::UseCalcHist(const Mat& I, Mat& J, int bins)
 	{
 		// 通道
 		int channels[] = { 0, 1 };
-		int h_bins = 30, s_bins = bins;
+		int h_bins = hbins, s_bins = sbins;
 		int histSize[] = { h_bins, s_bins };
 		// 设定取值范围
 		float h_range[] = { 0, 180 };
@@ -547,7 +548,7 @@ void MyReduceImage::UseCalcHist(const Mat& I, Mat& J, int bins)
 		cvtColor(I, hsv, CV_BGR2HSV);
 		calcHist(&hsv, 1, channels, Mat(), hist, 2, histSize, histRange_bgr, uniform, accumulate);
 
-		normalize(hist, hist, 0, 1, NORM_MINMAX, -1, Mat());
+		//normalize(hist, hist, 0, 1, NORM_MINMAX, -1, Mat());
 
 		hist.copyTo(J);
 	}
@@ -555,4 +556,27 @@ void MyReduceImage::UseCalcHist(const Mat& I, Mat& J, int bins)
 	default:
 		break;
 	}
+}
+
+
+void MyReduceImage::UseCalcBackProject(const Mat& I, const Mat& J, Mat& K, int hbins, int sbins)
+{
+	if (I.channels() != 3 || J.channels() != 3)
+		return;
+	MatND temp;
+	UseCalcHist(I, temp, hbins, sbins);
+	normalize(temp, temp, 0, 255, NORM_MINMAX, -1, Mat());
+	// 通道
+	int channels[] = { 0, 1 };
+	int h_bins = hbins, s_bins = sbins;
+	int histSize[] = { h_bins, s_bins };
+	// 设定取值范围
+	float h_range[] = { 0, 180 };
+	float s_range[] = { 0, 256 };
+	const float* histRange_bgr[] = { h_range , s_range };
+	Mat hsv;
+	MatND backproj;
+	cvtColor(J, hsv, CV_BGR2HSV);
+	calcBackProject(&hsv, 1, channels, temp, backproj, histRange_bgr, 1, true);
+	backproj.copyTo(K);
 }

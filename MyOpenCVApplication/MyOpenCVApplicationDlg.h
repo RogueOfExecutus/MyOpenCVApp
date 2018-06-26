@@ -149,4 +149,8 @@ private:
 	void ShowMethodTwenty();
 	// 隐藏直方图对比方法
 	void HideMethodTwenty();
+	// 展示反射投影方法
+	void ShowMethodTwentyOne();
+	// 隐藏反射投影方法
+	void HideMethodTwentyOne();
 };

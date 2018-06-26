@@ -10,6 +10,8 @@ private:
 	void update_map(int type, float rows, float cols);
 	Mat map_x;
 	Mat map_y;
+	// 直方图计算
+	void UseCalcHist(const Mat& I, Mat& J, int hbins, int sbins);
 public:
 	MyReduceImage();
 	MyReduceImage(int inputDivideWith);
@@ -57,8 +59,7 @@ public:
 	void UseCalcHistAndDraw(const Mat& I, Mat& J, int bins);
 	// 直方图对比
 	double UseCompareHist(const Mat& I, const Mat& J, int method);
-private:
-	// 直方图计算
-	void UseCalcHist(const Mat& I, Mat& J, int bins);
+	// 反射投影
+	void UseCalcBackProject(const Mat& I, const Mat& J, Mat& K, int hbins, int sbins);
 };
 
