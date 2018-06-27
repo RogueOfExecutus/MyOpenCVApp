@@ -168,7 +168,8 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(18, _T("直方图计算"));
 	selectMethod.InsertString(19, _T("直方图对比"));
 	selectMethod.InsertString(20, _T("反射投影"));
-	selectMethod.InsertString(21, _T("不处理"));
+	selectMethod.InsertString(21, _T("模板匹配"));
+	selectMethod.InsertString(22, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -288,7 +289,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		J = Mat::zeros(image_r.size(), image_r.type());
 		//第二图像路径
 		String imgFile = OpenImageFile();
-		Mat K = imread(imgFile, CV_LOAD_IMAGE_COLOR);
+		Mat K = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
 		if (K.size() != image_r.size()) {
 			MessageBox(_T("图片长宽不相等！不可叠加！"));
 			return;
@@ -450,7 +451,12 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 	{
 		//第二图像路径
 		String imgFile = OpenImageFile();
-		J = imread(imgFile, CV_LOAD_IMAGE_COLOR);
+		J = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+		if (!J.data)
+		{
+			MessageBox(_T("打开图片失败"));
+			return;
+		}
 		double result = reduceImage.UseCompareHist(image_r, J, method_one_selecter.GetCurSel());
 		CString msg;
 		msg.Format(_T("对比结果：%lf"), result);
@@ -461,11 +467,29 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 	{
 		//第二图像路径
 		String imgFile = OpenImageFile();
-		Mat _J = imread(imgFile, CV_LOAD_IMAGE_COLOR);
+		Mat _J = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+		if (!_J.data)
+		{
+			MessageBox(_T("打开图片失败"));
+			return;
+		}
 		CString str0;
 		m_num_edit.GetWindowTextW(str0);
 		int bins = _ttoi(str0);
 		reduceImage.UseCalcBackProject(image_r, _J, J, 180, bins);
+	}
+		break;
+	case 21:
+	{
+		//模板图像路径
+		String imgFile = OpenImageFile();
+		Mat templ = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+		if (!templ.data)
+		{
+			MessageBox(_T("打开模板失败"));
+			return;
+		}
+		reduceImage.UseMatchTemplate(image_r, templ, J, method_one_selecter.GetCurSel());
 	}
 		break;
 	default:
@@ -551,6 +575,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 20:
 		HideMethodTwentyOne();
 		break;
+	case 21:
+		HideMethodTwentyTwo();
+		break;
 	default:
 		break;
 	}
@@ -635,6 +662,10 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		ShowMethodTwentyOne();
 		m_last_spin_num = 20;
 		break;
+	case 21:
+		ShowMethodTwentyTwo();
+		m_last_spin_num = 21;
+		break;
 	default:
 		break;
 	}
@@ -671,7 +702,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedButton1()
 
 	//读入图像
 	//image_r = imread(imgFile, CV_LOAD_IMAGE_GRAYSCALE);
-	image_r = imread(imgFile, CV_LOAD_IMAGE_COLOR);
+	image_r = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
 	
 	if (!image_r.data)
 	{
@@ -1173,4 +1204,26 @@ void CMyOpenCVApplicationDlg::HideMethodTwentyOne()
 	m_num_edit.ShowWindow(SW_HIDE);
 	m_spin_one.ShowWindow(SW_HIDE);
 	m_spin_one.SetRange32(0, 255);//表示数值只能在1到256内变化
+}
+
+
+// 展示模板匹配方法
+void CMyOpenCVApplicationDlg::ShowMethodTwentyTwo()
+{
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.InsertString(0, _T("SQDIFF"));
+	method_one_selecter.InsertString(1, _T("SQDIFF NORMED"));
+	method_one_selecter.InsertString(2, _T("CCORR"));
+	method_one_selecter.InsertString(3, _T("CCORR NORMED"));
+	method_one_selecter.InsertString(4, _T("CCOEFF "));
+	method_one_selecter.InsertString(5, _T("CCOEFF NORMED"));
+	method_one_selecter.SetCurSel(0);
+}
+
+
+// 隐藏模板匹配方法
+void CMyOpenCVApplicationDlg::HideMethodTwentyTwo()
+{
+	method_one_selecter.ShowWindow(SW_HIDE);
+	method_one_selecter.ResetContent();
 }

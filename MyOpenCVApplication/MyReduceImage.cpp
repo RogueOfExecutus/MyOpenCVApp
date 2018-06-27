@@ -580,3 +580,36 @@ void MyReduceImage::UseCalcBackProject(const Mat& I, const Mat& J, Mat& K, int h
 	calcBackProject(&hsv, 1, channels, temp, backproj, histRange_bgr, 1, true);
 	backproj.copyTo(K);
 }
+
+
+// Ä£°åÆ¥Åä·½·¨
+void MyReduceImage::UseMatchTemplate(const Mat& I, const Mat& templ, Mat& J, int method)
+{
+	I.copyTo(J);
+	if (I.channels() != templ.channels())
+		return;
+	Mat result;
+	int result_cols = I.cols - templ.cols + 1;
+	int result_rows = I.rows - templ.rows + 1;
+
+	result.create(result_cols, result_rows, CV_32FC1);
+
+	matchTemplate(I, templ, result, method);
+
+	normalize(result, result, 0, 1, NORM_MINMAX, -1, Mat());
+
+	Point minLoc; 
+	Point maxLoc;
+	Point matchLoc;
+
+	minMaxLoc(result, 0, 0, &minLoc, &maxLoc);
+	if (method == CV_TM_SQDIFF || method == CV_TM_SQDIFF_NORMED)
+		matchLoc = minLoc;
+	else
+		matchLoc = maxLoc;
+
+	rectangle(J, matchLoc, Point(matchLoc.x + templ.cols, matchLoc.y + templ.rows), Scalar::all(0), 2, 8, 0);
+	rectangle(result, matchLoc, Point(matchLoc.x + templ.cols, matchLoc.y + templ.rows), Scalar::all(0), 2, 8, 0);
+
+	imshow("result", result);
+}

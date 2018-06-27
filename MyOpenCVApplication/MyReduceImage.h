@@ -61,5 +61,7 @@ public:
 	double UseCompareHist(const Mat& I, const Mat& J, int method);
 	// 反射投影
 	void UseCalcBackProject(const Mat& I, const Mat& J, Mat& K, int hbins, int sbins);
+	// 模板匹配方法
+	void UseMatchTemplate(const Mat& I, const Mat& templ, Mat& J, int method);
 };
 

@@ -153,4 +153,8 @@ private:
 	void ShowMethodTwentyOne();
 	// 隐藏反射投影方法
 	void HideMethodTwentyOne();
+	// 展示模板匹配方法
+	void ShowMethodTwentyTwo();
+	// 隐藏模板匹配方法
+	void HideMethodTwentyTwo();
 };
