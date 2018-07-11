@@ -132,6 +132,7 @@ public:
 	afx_msg void OnContextMenu(CWnd* /*pWnd*/, CPoint /*point*/);
 	afx_msg void OnCopyCoordinate();
 	afx_msg void OnHandlePart();
+	afx_msg void OnBnClickedMultipleBlend();
 private:
 	// 显示重映射选项
 	void ShowMethodFifteen();
@@ -157,4 +158,9 @@ private:
 	void ShowMethodTwentyTwo();
 	// 隐藏模板匹配方法
 	void HideMethodTwentyTwo();
+	// 打开图片文件夹
+	CString PickImageFile();
+	// 递归扫码文件夹下文件
+	void TraverseDir(CString& strDir, std::vector<CString>& vecFiles);
+	CButton m_multiple_blend;
 };

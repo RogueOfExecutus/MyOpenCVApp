@@ -92,6 +92,7 @@ void CMyOpenCVApplicationDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_STATIC_SEVEN_EIGHT, m_static_seven_eight);
 	DDX_Control(pDX, IDC_STATIC_TEN, m_static_ten);
 	DDX_Control(pDX, IDC_STATIC_NINE, m_static_nine);
+	DDX_Control(pDX, IDC_MULTIPLE_BLEND, m_multiple_blend);
 }
 
 BEGIN_MESSAGE_MAP(CMyOpenCVApplicationDlg, CDialogEx)
@@ -110,6 +111,7 @@ BEGIN_MESSAGE_MAP(CMyOpenCVApplicationDlg, CDialogEx)
 	ON_WM_CONTEXTMENU()
 	ON_COMMAND(ID_COPY_COORDINATE, &CMyOpenCVApplicationDlg::OnCopyCoordinate)
 	ON_COMMAND(ID_HANDLE_PART, &CMyOpenCVApplicationDlg::OnHandlePart)
+	ON_BN_CLICKED(IDC_MULTIPLE_BLEND, &CMyOpenCVApplicationDlg::OnBnClickedMultipleBlend)
 END_MESSAGE_MAP()
 
 
@@ -743,6 +745,7 @@ void CMyOpenCVApplicationDlg::OnClose()
 // 展示图像求和法选项
 void CMyOpenCVApplicationDlg::ShowMethodThree()
 {
+	m_multiple_blend.ShowWindow(SW_SHOW);
 	m_alpha_edit.ShowWindow(SW_SHOW);
 	m_static_three.ShowWindow(SW_SHOW);
 }
@@ -751,6 +754,7 @@ void CMyOpenCVApplicationDlg::ShowMethodThree()
 // 隐藏图像求和法选项
 void CMyOpenCVApplicationDlg::HideMethodThree()
 {
+	m_multiple_blend.ShowWindow(SW_HIDE);
 	m_alpha_edit.ShowWindow(SW_HIDE);
 	m_static_three.ShowWindow(SW_HIDE);
 }
@@ -1226,4 +1230,79 @@ void CMyOpenCVApplicationDlg::HideMethodTwentyTwo()
 {
 	method_one_selecter.ShowWindow(SW_HIDE);
 	method_one_selecter.ResetContent();
+}
+
+
+void CMyOpenCVApplicationDlg::OnBnClickedMultipleBlend()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	vector<CString> vecFiles;
+	CString imgFile = PickImageFile();
+	if (imgFile.IsEmpty()) {
+		return;
+	}
+	TraverseDir(imgFile, vecFiles);
+	int len = vecFiles.size();
+	double skip_num = 0.0;
+	Mat I = imread((LPCSTR)(CStringA)vecFiles.at(0), CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+	Mat J;
+	for (int i = 1; i < len; i++)
+	{
+		double alpha = 1.0 / (i + 1.0 - skip_num);
+		Mat next = imread((LPCSTR)(CStringA)vecFiles.at(i), CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+		if (I.size() != next.size()) 
+		{
+			skip_num += 1.0;
+			continue;
+		}
+		reduceImage.UseAddWeighted(next, I, alpha, J);
+		I = J.clone();
+	}
+	imshow(showWindowName, I);
+	CString str;
+	str.Format(_T("共有%d张图片，有%d张与第一张大小不一"), len, (int)skip_num);
+	MessageBox(str);
+}
+
+
+// 打开图片文件夹
+CString CMyOpenCVApplicationDlg::PickImageFile()
+{
+	CFolderPickerDialog findFileDlg(NULL, 0, this, 0);
+	CString imgFile;
+	if (IDOK == findFileDlg.DoModal())
+	{
+		imgFile = findFileDlg.GetPathName();
+	}
+	return imgFile;
+}
+
+
+// 递归扫码文件夹下文件
+void CMyOpenCVApplicationDlg::TraverseDir(CString& strDir, vector<CString>& vecFiles)
+{
+	CFileFind ff;
+	//在路径后面添加\*.*后缀
+	if (strDir.Right(1) != "\\")
+		strDir += "\\";
+	strDir += "*.jpg";
+	BOOL ret = ff.FindFile(strDir);
+	while (ret)
+	{
+		ret = ff.FindNextFile();
+		if (ff.IsDirectory() && !ff.IsDots())
+		{
+			CString path = ff.GetFilePath();
+			TraverseDir(path, vecFiles);
+		}
+		else if (!ff.IsDirectory() && !ff.IsDots())
+		{
+			//CString name = ff.GetFileName();//获取带后缀的文件名
+			CString name = ff.GetFilePath();//获取文件路径
+											//CString name = ff.GetFileTitle();//获取不带后缀的文件名
+			vecFiles.push_back(name);
+		}
+
+	}
+
 }
