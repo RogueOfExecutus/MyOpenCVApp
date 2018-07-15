@@ -171,7 +171,8 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(19, _T("直方图对比"));
 	selectMethod.InsertString(20, _T("反射投影"));
 	selectMethod.InsertString(21, _T("模板匹配"));
-	selectMethod.InsertString(22, _T("不处理"));
+	selectMethod.InsertString(22, _T("寻找轮廓"));
+	selectMethod.InsertString(23, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -494,6 +495,15 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		reduceImage.UseMatchTemplate(image_r, templ, J, method_one_selecter.GetCurSel());
 	}
 		break;
+	case 22:
+	{
+		CString str0;
+		m_num_edit.GetWindowTextW(str0);
+		int thresh = _ttoi(str0);
+		J = Mat::zeros(image_r.size(), CV_8UC3);
+		reduceImage.FindAndDrawContours(image_r, J, thresh);
+	}
+		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -579,6 +589,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		break;
 	case 21:
 		HideMethodTwentyTwo();
+		break;
+	case 22:
+		HideMethodTwentyThree();
 		break;
 	default:
 		break;
@@ -667,6 +680,10 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 21:
 		ShowMethodTwentyTwo();
 		m_last_spin_num = 21;
+		break;
+	case 22:
+		ShowMethodTwentyThree();
+		m_last_spin_num = 22;
 		break;
 	default:
 		break;
@@ -1305,4 +1322,18 @@ void CMyOpenCVApplicationDlg::TraverseDir(CString& strDir, vector<CString>& vecF
 
 	}
 
+}
+
+//展示寻找轮廓方法
+void CMyOpenCVApplicationDlg::ShowMethodTwentyThree()
+{
+	m_num_edit.ShowWindow(SW_SHOW);
+	m_spin_one.ShowWindow(SW_SHOW);
+}
+
+//隐藏寻找轮廓方法
+void CMyOpenCVApplicationDlg::HideMethodTwentyThree()
+{
+	m_num_edit.ShowWindow(SW_HIDE);
+	m_spin_one.ShowWindow(SW_HIDE);
 }

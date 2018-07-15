@@ -163,4 +163,8 @@ private:
 	// 递归扫码文件夹下文件
 	void TraverseDir(CString& strDir, std::vector<CString>& vecFiles);
 	CButton m_multiple_blend;
+	// 展示寻找轮廓方法
+	void ShowMethodTwentyThree();
+	// 隐藏寻找轮廓方法
+	void HideMethodTwentyThree();
 };

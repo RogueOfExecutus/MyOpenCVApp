@@ -63,5 +63,7 @@ public:
 	void UseCalcBackProject(const Mat& I, const Mat& J, Mat& K, int hbins, int sbins);
 	// Ä£°åÆ¥Åä·½·¨
 	void UseMatchTemplate(const Mat& I, const Mat& templ, Mat& J, int method);
+	// Ñ°ÕÒÂÖÀª
+	void FindAndDrawContours(const Mat& I, Mat& J, int thresh);
 };
 

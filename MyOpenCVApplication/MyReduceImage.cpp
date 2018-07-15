@@ -613,3 +613,33 @@ void MyReduceImage::UseMatchTemplate(const Mat& I, const Mat& templ, Mat& J, int
 
 	imshow("result", result);
 }
+
+
+// Ñ°ÕÒÂÖÀª
+void MyReduceImage::FindAndDrawContours(const Mat& I, Mat& J, int thresh)
+{
+	Mat temp;
+	if (I.channels() == 1)
+	{
+		I.copyTo(temp);
+	}
+	else
+	{
+		cvtColor(I, temp, CV_BGR2GRAY);
+	}
+
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+
+	Canny(temp, temp, thresh, thresh * 2, 3);
+
+	/// Ñ°ÕÒÂÖÀª
+	findContours(temp, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+	RNG rng(12345);
+	for (int i = 0; i< contours.size(); i++)
+	{
+		Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+		drawContours(J, contours, i, color, 2, 8, hierarchy, 0, Point());
+	}
+
+}
