@@ -35,7 +35,7 @@ void MyReduceImage::SetDivideWith(int inputDivideWith)
 void MyReduceImage::UseLUT(const Mat& I, Mat& J)
 {
 	// TODO: 在此处插入 return 语句
-	CV_Assert(I.depth() == CV_8U);  // 仅接受uchar图像
+	//CV_Assert(I.depth() == CV_8U);  // 仅接受uchar图像
 	Mat lookUpTable(1, 256, CV_8UC1,table);
 	LUT(I, lookUpTable, J);
 	//return J;
@@ -53,7 +53,7 @@ void MyReduceImage::UseThreshold(const Mat& I,Mat& J,int threshold_value, int th
 	threshold(src_gray, J, threshold_value, 255, threshold_type);
 }
 
-
+// 矩阵的掩码操作
 void MyReduceImage::UseFilter2D(const Mat& I, Mat& J)
 {
 	Mat kernel = (Mat_<char>(3, 3) << 0, -1,  0,
@@ -62,13 +62,13 @@ void MyReduceImage::UseFilter2D(const Mat& I, Mat& J)
 	filter2D(I, J, I.depth(), kernel);
 }
 
-
+// 图像求和
 void MyReduceImage::UseAddWeighted(const Mat& I, Mat& K, double alpha, Mat& J)
 {
 	addWeighted(I,alpha,K,(1.0 - alpha),0.0,J);
 }
 
-
+// 改变亮度和对比度
 void MyReduceImage::ChangeAlphaBeta(const Mat& I, Mat& J, double alpha, int beta)
 {
 	//执行运算new_image(i,j) = alpha * image(i,j) + beta
@@ -189,6 +189,7 @@ void MyReduceImage::UseErosion(const Mat& I, Mat& J, int erosion_type, int erosi
 	erode(I, J, element);
 }
 
+// 膨胀处理
 void MyReduceImage::UseDilation(const Mat & I, Mat & J, int dilation_type, int dilation_size)
 {
 	Mat element = getStructuringElement(dilation_type,
@@ -198,7 +199,7 @@ void MyReduceImage::UseDilation(const Mat & I, Mat & J, int dilation_type, int d
 	dilate(I, J, element);
 }
 
-
+// 图像金字塔
 void MyReduceImage::UsePyr(const Mat& I, Mat& J, int up_or_down, int cycle)
 {
 	Mat temp;
@@ -220,7 +221,7 @@ void MyReduceImage::UsePyr(const Mat& I, Mat& J, int up_or_down, int cycle)
 	}
 }
 
-
+// 添加边界
 void MyReduceImage::UseCopyMakeBorder(const Mat& I, Mat& J, Scalar value, int borderType)
 {
 	int size_tb = I.rows / 20, size_lr = I.cols / 20;
@@ -239,7 +240,7 @@ void MyReduceImage::UseCopyMakeBorder(const Mat& I, Mat& J, Scalar value, int bo
 	copyMakeBorder(I, J, size_tb, size_tb, size_lr, size_lr, borderType, value);
 }
 
-
+// 边缘检测
 void MyReduceImage::UseEdgeDetection(const Mat& I, Mat& J, int method)
 {
 	if (method == 2) 
@@ -278,7 +279,7 @@ void MyReduceImage::UseEdgeDetection(const Mat& I, Mat& J, int method)
 	}
 }
 
-
+// 霍夫线变换
 void MyReduceImage::UseHoughLines(const Mat& I, Mat& J, int method)
 {
 	J = I.clone();
@@ -348,7 +349,7 @@ void MyReduceImage::UseHoughCircles(const Mat& I, Mat& J)
 	}
 }
 
-//画矩形
+// 画矩形
 void MyReduceImage::UseRectangle(Mat& I, Point s, Point e)
 {
 	rectangle(I, s, e, Scalar(0, 0, 255),2,8,0);
@@ -393,7 +394,7 @@ void MyReduceImage::update_map(int type, float rows, float cols)
 	}
 }
 
-//重映射
+// 重映射
 void MyReduceImage::UseRemap(const Mat& I, Mat& J, int type)
 {
 	map_x.create(I.size(), CV_32FC1);
@@ -402,7 +403,7 @@ void MyReduceImage::UseRemap(const Mat& I, Mat& J, int type)
 	remap(I, J, map_x, map_y, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
 }
 
-//放射变换
+// 仿射变换
 void MyReduceImage::UseWarpAffine(const Mat& I, Mat& J)
 {
 	Point2f srcTri[3];
@@ -447,7 +448,7 @@ void MyReduceImage::UseEqualizeHist(const Mat& I, Mat& J)
 	equalizeHist(temp, J);
 }
 
-//直方图绘画
+// 直方图绘画
 void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int bins)
 {
 	int len = I.channels();
@@ -502,7 +503,7 @@ void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int bins)
 	}
 }
 
-
+// 直方图对比
 double MyReduceImage::UseCompareHist(const Mat& I, const Mat& J, int method)
 {
 	if(I.channels() != J.channels())
@@ -558,7 +559,7 @@ void MyReduceImage::UseCalcHist(const Mat& I, Mat& J, int hbins, int sbins)
 	}
 }
 
-
+// 反射投影
 void MyReduceImage::UseCalcBackProject(const Mat& I, const Mat& J, Mat& K, int hbins, int sbins)
 {
 	if (I.channels() != 3 || J.channels() != 3)
@@ -615,8 +616,25 @@ void MyReduceImage::UseMatchTemplate(const Mat& I, const Mat& templ, Mat& J, int
 }
 
 
-// 寻找轮廓
+// 绘画轮廓
 void MyReduceImage::FindAndDrawContours(const Mat& I, Mat& J, int thresh)
+{
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	FindAllContours(I, contours, hierarchy, thresh);
+	RNG rng(12345);
+	for (int i = 0; i< contours.size(); i++)
+	{
+		Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+		//drawContours(J, contours, i, color, 2, 8, hierarchy, 0, Point());
+		drawContours(J, contours, i, color, 2, 8, vector<Vec4i>(), 0, Point());
+	}
+
+}
+
+
+// 寻找轮廓
+void MyReduceImage::FindAllContours(const Mat& I, vector<vector<Point>>& contours, vector<Vec4i>& hierarchy, int thresh)
 {
 	Mat temp;
 	if (I.channels() == 1)
@@ -627,19 +645,38 @@ void MyReduceImage::FindAndDrawContours(const Mat& I, Mat& J, int thresh)
 	{
 		cvtColor(I, temp, CV_BGR2GRAY);
 	}
-
-	vector<vector<Point> > contours;
-	vector<Vec4i> hierarchy;
-
+	UseBlur(temp, temp, 1, 3);
 	Canny(temp, temp, thresh, thresh * 2, 3);
 
 	/// 寻找轮廓
 	findContours(temp, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+}
+
+// 寻找凸包
+void MyReduceImage::FindConvexHull(const vector<vector<Point>>& contours, vector<vector<Point>>& hull)
+{
+	for (int i = 0; i < contours.size(); i++)
+	{
+		convexHull(Mat(contours[i]), hull[i], false);
+	}
+}
+
+// 绘画凸包
+void MyReduceImage::FindAndDrawConvexHull(const Mat& I, Mat& J, int thresh, bool is_draw_contours)
+{
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	FindAllContours(I, contours, hierarchy, thresh);
+	int len = contours.size();
+	vector<vector<Point> > hull(len);
+	FindConvexHull(contours, hull);
 	RNG rng(12345);
-	for (int i = 0; i< contours.size(); i++)
+	for (int i = 0; i< len; i++)
 	{
 		Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
-		drawContours(J, contours, i, color, 2, 8, hierarchy, 0, Point());
+		drawContours(J, hull, i, color, 1, 8, vector<Vec4i>(), 0, Point());
+		if(is_draw_contours)
+			drawContours(J, contours, i, color, 1, 8, vector<Vec4i>(), 0, Point());
 	}
 
 }

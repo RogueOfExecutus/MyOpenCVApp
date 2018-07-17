@@ -93,6 +93,7 @@ void CMyOpenCVApplicationDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_STATIC_TEN, m_static_ten);
 	DDX_Control(pDX, IDC_STATIC_NINE, m_static_nine);
 	DDX_Control(pDX, IDC_MULTIPLE_BLEND, m_multiple_blend);
+	DDX_Control(pDX, IDC_CHECK_DRAW_CONTOURS, m_check_is_draw_contours);
 }
 
 BEGIN_MESSAGE_MAP(CMyOpenCVApplicationDlg, CDialogEx)
@@ -172,7 +173,8 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(20, _T("反射投影"));
 	selectMethod.InsertString(21, _T("模板匹配"));
 	selectMethod.InsertString(22, _T("寻找轮廓"));
-	selectMethod.InsertString(23, _T("不处理"));
+	selectMethod.InsertString(23, _T("寻找凸包"));
+	selectMethod.InsertString(24, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -261,6 +263,11 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	//CDialogEx::OnOK();
+	if (image_r.depth() != CV_8U)
+	{
+		MessageBox(_T("图像格式不对！"));
+		return;
+	}
 	Mat J;
 	switch (m_last_spin_num)
 	{
@@ -504,6 +511,15 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		reduceImage.FindAndDrawContours(image_r, J, thresh);
 	}
 		break;
+	case 23:
+	{
+		CString str0;
+		m_num_edit.GetWindowTextW(str0);
+		int thresh = _ttoi(str0);
+		J = Mat::zeros(image_r.size(), CV_8UC3);
+		reduceImage.FindAndDrawConvexHull(image_r, J, thresh, m_check_is_draw_contours.GetCheck());
+	}
+		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -592,6 +608,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		break;
 	case 22:
 		HideMethodTwentyThree();
+		break;
+	case 23:
+		HideMethodTwentyFour();
 		break;
 	default:
 		break;
@@ -684,6 +703,10 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 22:
 		ShowMethodTwentyThree();
 		m_last_spin_num = 22;
+		break;
+	case 23:
+		ShowMethodTwentyFour();
+		m_last_spin_num = 23;
 		break;
 	default:
 		break;
@@ -1324,16 +1347,32 @@ void CMyOpenCVApplicationDlg::TraverseDir(CString& strDir, vector<CString>& vecF
 
 }
 
-//展示寻找轮廓方法
+// 展示寻找轮廓方法
 void CMyOpenCVApplicationDlg::ShowMethodTwentyThree()
 {
 	m_num_edit.ShowWindow(SW_SHOW);
 	m_spin_one.ShowWindow(SW_SHOW);
 }
 
-//隐藏寻找轮廓方法
+// 隐藏寻找轮廓方法
 void CMyOpenCVApplicationDlg::HideMethodTwentyThree()
 {
 	m_num_edit.ShowWindow(SW_HIDE);
 	m_spin_one.ShowWindow(SW_HIDE);
+}
+
+// 展示寻找凸包方法
+void CMyOpenCVApplicationDlg::ShowMethodTwentyFour()
+{
+	m_num_edit.ShowWindow(SW_SHOW);
+	m_spin_one.ShowWindow(SW_SHOW);
+	m_check_is_draw_contours.ShowWindow(SW_SHOW);
+}
+
+// 隐藏寻找凸包方法
+void CMyOpenCVApplicationDlg::HideMethodTwentyFour()
+{
+	m_num_edit.ShowWindow(SW_HIDE);
+	m_spin_one.ShowWindow(SW_HIDE);
+	m_check_is_draw_contours.ShowWindow(SW_HIDE);
 }

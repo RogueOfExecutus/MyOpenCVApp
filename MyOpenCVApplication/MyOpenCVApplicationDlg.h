@@ -167,4 +167,9 @@ private:
 	void ShowMethodTwentyThree();
 	// Òþ²ØÑ°ÕÒÂÖÀª·½·¨
 	void HideMethodTwentyThree();
+	void ShowMethodTwentyFour();
+public:
+	void HideMethodTwentyFour();
+private:
+	CButton m_check_is_draw_contours;
 };
