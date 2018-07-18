@@ -172,4 +172,12 @@ public:
 	void HideMethodTwentyFour();
 private:
 	CButton m_check_is_draw_contours;
+	// 展示多边形拟合方法
+	void ShowMethodTwentyFive();
+	// 隐藏多边形拟合方法
+	void HideMethodTwentyFive();
+	// 展示包覆图形方法
+	void ShowMethodTwentySix();
+	// 隐藏包覆图形方法
+	void HideMethodTwentySix();
 };

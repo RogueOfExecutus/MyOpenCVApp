@@ -174,7 +174,9 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(21, _T("模板匹配"));
 	selectMethod.InsertString(22, _T("寻找轮廓"));
 	selectMethod.InsertString(23, _T("寻找凸包"));
-	selectMethod.InsertString(24, _T("不处理"));
+	selectMethod.InsertString(24, _T("多边形拟合"));
+	selectMethod.InsertString(25, _T("包覆图形"));
+	selectMethod.InsertString(26, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -520,6 +522,24 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		reduceImage.FindAndDrawConvexHull(image_r, J, thresh, m_check_is_draw_contours.GetCheck());
 	}
 		break;
+	case 24:
+	{
+		CString str0;
+		m_num_edit.GetWindowTextW(str0);
+		int thresh = _ttoi(str0);
+		J = Mat::zeros(image_r.size(), CV_8UC3);
+		reduceImage.UseApproxPolyDP(image_r, J, thresh, m_check_is_draw_contours.GetCheck());
+	}
+		break;
+	case 25:
+	{
+		CString str0;
+		m_num_edit.GetWindowTextW(str0);
+		int thresh = _ttoi(str0);
+		J = Mat::zeros(image_r.size(), CV_8UC3);
+		reduceImage.DrawRectOrCircle(image_r, J, thresh, method_one_selecter.GetCurSel());
+	}
+		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -611,6 +631,12 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		break;
 	case 23:
 		HideMethodTwentyFour();
+		break;
+	case 24:
+		HideMethodTwentyFive();
+		break;
+	case 25:
+		HideMethodTwentySix();
 		break;
 	default:
 		break;
@@ -707,6 +733,14 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 23:
 		ShowMethodTwentyFour();
 		m_last_spin_num = 23;
+		break;
+	case 24:
+		ShowMethodTwentyFive();
+		m_last_spin_num = 24;
+		break;
+	case 25:
+		ShowMethodTwentySix();
+		m_last_spin_num = 25;
 		break;
 	default:
 		break;
@@ -1375,4 +1409,46 @@ void CMyOpenCVApplicationDlg::HideMethodTwentyFour()
 	m_num_edit.ShowWindow(SW_HIDE);
 	m_spin_one.ShowWindow(SW_HIDE);
 	m_check_is_draw_contours.ShowWindow(SW_HIDE);
+}
+
+
+// 展示多边形拟合方法
+void CMyOpenCVApplicationDlg::ShowMethodTwentyFive()
+{
+	m_num_edit.ShowWindow(SW_SHOW);
+	m_spin_one.ShowWindow(SW_SHOW);
+	m_check_is_draw_contours.ShowWindow(SW_SHOW);
+}
+
+
+// 隐藏多边形拟合方法
+void CMyOpenCVApplicationDlg::HideMethodTwentyFive()
+{
+	m_num_edit.ShowWindow(SW_HIDE);
+	m_spin_one.ShowWindow(SW_HIDE);
+	m_check_is_draw_contours.ShowWindow(SW_HIDE);
+}
+
+
+// 展示包覆图形方法
+void CMyOpenCVApplicationDlg::ShowMethodTwentySix()
+{
+	m_num_edit.ShowWindow(SW_SHOW);
+	m_spin_one.ShowWindow(SW_SHOW);
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.InsertString(0, _T("最小包覆正矩形"));
+	method_one_selecter.InsertString(1, _T("最小包覆斜矩形"));
+	method_one_selecter.InsertString(2, _T("最小包覆圆形"));
+}
+
+
+// 隐藏包覆图形方法
+void CMyOpenCVApplicationDlg::HideMethodTwentySix()
+{
+	m_num_edit.ShowWindow(SW_HIDE);
+	m_spin_one.ShowWindow(SW_HIDE);
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.InsertString(0, _T("最小包覆正矩形"));
+	method_one_selecter.InsertString(1, _T("最小包覆斜矩形"));
+	method_one_selecter.InsertString(2, _T("最小包覆圆形"));
 }

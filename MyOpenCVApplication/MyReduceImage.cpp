@@ -680,3 +680,104 @@ void MyReduceImage::FindAndDrawConvexHull(const Mat& I, Mat& J, int thresh, bool
 	}
 
 }
+
+
+// 多边形拟合
+void MyReduceImage::UseApproxPolyDP(const Mat& I, Mat& J, int thresh, bool closed)
+{
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	FindAllContours(I, contours, hierarchy, thresh);
+
+	/// 多边形逼近轮廓 + 获取矩形和圆形边界框
+	vector<vector<Point> > contours_poly(contours.size());
+
+	for (int i = 0; i < contours.size(); i++)
+	{
+		approxPolyDP(Mat(contours[i]), contours_poly[i], 3, closed);
+	}
+	RNG rng(12345);
+	for (int i = 0; i< contours.size(); i++)
+	{
+		Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+		drawContours(J, contours_poly, i, color, 1, 8, vector<Vec4i>(), 0, Point());
+	}
+}
+
+
+// 最小包覆正矩形
+void MyReduceImage::UseBoundingRect(const Mat& I, Mat& J, int thresh)
+{
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	FindAllContours(I, contours, hierarchy, thresh);
+	int len = contours.size();
+	vector<Rect> boundRect(len);
+	for (int i = 0; i < len; i++)
+	{
+		boundRect[i] = boundingRect(Mat(contours[i]));
+	}
+	for (int i = 0; i< len; i++)
+	{
+		rectangle(J, boundRect[i].tl(), boundRect[i].br(), Scalar(0, 0, 255), 2, 8, 0);
+	}
+}
+
+
+// 最小包覆斜矩形
+void MyReduceImage::UseMinAreaRect(const Mat& I, Mat& J, int thresh)
+{
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	FindAllContours(I, contours, hierarchy, thresh);
+	int len = contours.size();
+
+	vector<Point2f[4]> vertices(len);//定义矩形的4个顶点
+
+	for (int i = 0; i < len; i++)
+		minAreaRect(Mat(contours[i])).points(vertices[i]); //计算矩形的4个顶点
+
+	for (int i = 0; i< len; i++)
+		for (int j = 0; j < 4; j++)
+			line(J, vertices[i][j], vertices[i][(j+1)%4], Scalar(0, 255, 0));
+}
+
+
+
+// 最小包覆圆形
+void MyReduceImage::UseMinEnclosingCircle(const Mat& I, Mat& J, int thresh)
+{
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	FindAllContours(I, contours, hierarchy, thresh);
+	vector<Point2f>center(contours.size());
+	vector<float>radius(contours.size());
+	int len = contours.size();
+	for (int i = 0; i < len; i++)
+	{
+		minEnclosingCircle(contours[i], center[i], radius[i]);
+	}
+	for (int i = 0; i< len; i++)
+	{
+		circle(J, center[i], (int)radius[i], Scalar(0, 0, 255), 2, 8, 0);
+	}
+}
+
+
+void MyReduceImage::DrawRectOrCircle(const Mat& I, Mat& J, int thresh, int method)
+{
+	switch (method)
+	{
+	case 0:
+		UseBoundingRect(I, J, thresh);
+		break;
+	case 1:
+		UseMinAreaRect(I, J, thresh);
+		break;
+	case 2:
+		UseMinEnclosingCircle(I, J, thresh);
+		break;
+	default:
+		break;
+	}
+}

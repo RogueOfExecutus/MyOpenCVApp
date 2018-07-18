@@ -71,5 +71,14 @@ public:
 	void FindAndDrawContours(const Mat& I, Mat& J, int thresh);
 	// 绘画凸包
 	void FindAndDrawConvexHull(const Mat& I, Mat& J, int thresh, bool is_draw_contours);
+	// 多边形拟合
+	void UseApproxPolyDP(const Mat& I, Mat& J, int thresh, bool closed);
+	// 最小包覆正矩形
+	void UseBoundingRect(const Mat& I, Mat& J, int thresh);
+	// 最小包覆斜矩形
+	void UseMinAreaRect(const Mat& I, Mat& J, int thresh);
+	// 最小包覆圆形
+	void UseMinEnclosingCircle(const Mat& I, Mat& J, int thresh);
+	void DrawRectOrCircle(const Mat& I, Mat& J, int thresh, int method);
 };
 
