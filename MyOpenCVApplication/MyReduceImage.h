@@ -16,6 +16,12 @@ private:
 	void FindAllContours(const Mat& I, std::vector<std::vector<Point>>& contours, std::vector<Vec4i>& hierarchy, int thresh);
 	// 寻找凸包
 	void FindConvexHull(const std::vector<std::vector<Point>>& contours, std::vector<std::vector<Point>>& hull);
+	// 最小包覆正矩形
+	void UseBoundingRect(const Mat& I, Mat& J, int thresh);
+	// 最小包覆斜矩形
+	void UseMinAreaRect(const Mat& I, Mat& J, int thresh);
+	// 最小包覆圆形
+	void UseMinEnclosingCircle(const Mat& I, Mat& J, int thresh);
 public:
 	MyReduceImage();
 	MyReduceImage(int inputDivideWith);
@@ -73,12 +79,7 @@ public:
 	void FindAndDrawConvexHull(const Mat& I, Mat& J, int thresh, bool is_draw_contours);
 	// 多边形拟合
 	void UseApproxPolyDP(const Mat& I, Mat& J, int thresh, bool closed);
-	// 最小包覆正矩形
-	void UseBoundingRect(const Mat& I, Mat& J, int thresh);
-	// 最小包覆斜矩形
-	void UseMinAreaRect(const Mat& I, Mat& J, int thresh);
-	// 最小包覆圆形
-	void UseMinEnclosingCircle(const Mat& I, Mat& J, int thresh);
+	// 包覆矩形/圆形
 	void DrawRectOrCircle(const Mat& I, Mat& J, int thresh, int method);
 };
 

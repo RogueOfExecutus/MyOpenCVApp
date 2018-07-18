@@ -734,12 +734,12 @@ void MyReduceImage::UseMinAreaRect(const Mat& I, Mat& J, int thresh)
 
 	vector<Point2f[4]> vertices(len);//定义矩形的4个顶点
 
-	for (int i = 0; i < len; i++)
+	for (int i = 0; i < len; i++) 
+	{
 		minAreaRect(Mat(contours[i])).points(vertices[i]); //计算矩形的4个顶点
-
-	for (int i = 0; i< len; i++)
 		for (int j = 0; j < 4; j++)
-			line(J, vertices[i][j], vertices[i][(j+1)%4], Scalar(0, 255, 0));
+			line(J, vertices[i][j], vertices[i][(j+1)%4], Scalar(0, 255, 0));//计算一个，画一个
+	}
 }
 
 
@@ -763,7 +763,7 @@ void MyReduceImage::UseMinEnclosingCircle(const Mat& I, Mat& J, int thresh)
 	}
 }
 
-
+// 包覆矩形/圆形
 void MyReduceImage::DrawRectOrCircle(const Mat& I, Mat& J, int thresh, int method)
 {
 	switch (method)
