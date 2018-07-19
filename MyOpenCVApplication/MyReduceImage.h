@@ -13,7 +13,7 @@ private:
 	// 直方图计算
 	void UseCalcHist(const Mat& I, Mat& J, int hbins, int sbins);
 	// 寻找轮廓
-	void FindAllContours(const Mat& I, std::vector<std::vector<Point>>& contours, std::vector<Vec4i>& hierarchy, int thresh);
+	void FindAllContours(const Mat& I, std::vector<std::vector<Point>>& contours, std::vector<Vec4i>& hierarchy, int thresh, bool cannyOrThresh);
 	// 寻找凸包
 	void FindConvexHull(const std::vector<std::vector<Point>>& contours, std::vector<std::vector<Point>>& hull);
 	// 最小包覆正矩形
@@ -81,5 +81,9 @@ public:
 	void UseApproxPolyDP(const Mat& I, Mat& J, int thresh, bool closed);
 	// 包覆矩形/圆形
 	void DrawRectOrCircle(const Mat& I, Mat& J, int thresh, int method);
+	// 最小包覆椭圆
+	void UseFitEllipse(const Mat& I, Mat& J, int thresh);
+	// 轮廓矩
+	void FindMoments(const Mat& I, Mat& J, int thresh);
 };
 

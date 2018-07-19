@@ -1439,6 +1439,9 @@ void CMyOpenCVApplicationDlg::ShowMethodTwentySix()
 	method_one_selecter.InsertString(0, _T("最小包覆正矩形"));
 	method_one_selecter.InsertString(1, _T("最小包覆斜矩形"));
 	method_one_selecter.InsertString(2, _T("最小包覆圆形"));
+	method_one_selecter.InsertString(3, _T("最小包覆椭圆"));
+	method_one_selecter.InsertString(4, _T("轮廓矩"));
+	method_one_selecter.SetCurSel(0);
 }
 
 
@@ -1447,8 +1450,6 @@ void CMyOpenCVApplicationDlg::HideMethodTwentySix()
 {
 	m_num_edit.ShowWindow(SW_HIDE);
 	m_spin_one.ShowWindow(SW_HIDE);
-	method_one_selecter.ShowWindow(SW_SHOW);
-	method_one_selecter.InsertString(0, _T("最小包覆正矩形"));
-	method_one_selecter.InsertString(1, _T("最小包覆斜矩形"));
-	method_one_selecter.InsertString(2, _T("最小包覆圆形"));
+	method_one_selecter.ShowWindow(SW_HIDE);
+	method_one_selecter.ResetContent();
 }

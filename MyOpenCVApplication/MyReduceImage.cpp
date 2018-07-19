@@ -621,7 +621,7 @@ void MyReduceImage::FindAndDrawContours(const Mat& I, Mat& J, int thresh)
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh);
+	FindAllContours(I, contours, hierarchy, thresh, true);
 	RNG rng(12345);
 	for (int i = 0; i< contours.size(); i++)
 	{
@@ -634,7 +634,7 @@ void MyReduceImage::FindAndDrawContours(const Mat& I, Mat& J, int thresh)
 
 
 // 寻找轮廓
-void MyReduceImage::FindAllContours(const Mat& I, vector<vector<Point>>& contours, vector<Vec4i>& hierarchy, int thresh)
+void MyReduceImage::FindAllContours(const Mat& I, vector<vector<Point>>& contours, vector<Vec4i>& hierarchy, int thresh, bool cannyOrThresh)
 {
 	Mat temp;
 	if (I.channels() == 1)
@@ -646,8 +646,11 @@ void MyReduceImage::FindAllContours(const Mat& I, vector<vector<Point>>& contour
 		cvtColor(I, temp, CV_BGR2GRAY);
 	}
 	UseBlur(temp, temp, 1, 3);
-	Canny(temp, temp, thresh, thresh * 2, 3);
-
+	if(cannyOrThresh)
+		Canny(temp, temp, thresh, thresh * 2, 3);
+	else
+		UseThreshold(temp, temp, thresh, THRESH_BINARY);
+	
 	/// 寻找轮廓
 	findContours(temp, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
 }
@@ -666,7 +669,7 @@ void MyReduceImage::FindAndDrawConvexHull(const Mat& I, Mat& J, int thresh, bool
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh);
+	FindAllContours(I, contours, hierarchy, thresh, false);
 	int len = contours.size();
 	vector<vector<Point> > hull(len);
 	FindConvexHull(contours, hull);
@@ -687,7 +690,7 @@ void MyReduceImage::UseApproxPolyDP(const Mat& I, Mat& J, int thresh, bool close
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh);
+	FindAllContours(I, contours, hierarchy, thresh, false);
 
 	/// 多边形逼近轮廓 + 获取矩形和圆形边界框
 	vector<vector<Point> > contours_poly(contours.size());
@@ -710,15 +713,12 @@ void MyReduceImage::UseBoundingRect(const Mat& I, Mat& J, int thresh)
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh);
+	FindAllContours(I, contours, hierarchy, thresh, false);
 	int len = contours.size();
 	vector<Rect> boundRect(len);
 	for (int i = 0; i < len; i++)
 	{
 		boundRect[i] = boundingRect(Mat(contours[i]));
-	}
-	for (int i = 0; i< len; i++)
-	{
 		rectangle(J, boundRect[i].tl(), boundRect[i].br(), Scalar(0, 0, 255), 2, 8, 0);
 	}
 }
@@ -729,7 +729,7 @@ void MyReduceImage::UseMinAreaRect(const Mat& I, Mat& J, int thresh)
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh);
+	FindAllContours(I, contours, hierarchy, thresh, false);
 	int len = contours.size();
 
 	vector<Point2f[4]> vertices(len);//定义矩形的4个顶点
@@ -749,16 +749,13 @@ void MyReduceImage::UseMinEnclosingCircle(const Mat& I, Mat& J, int thresh)
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh);
+	FindAllContours(I, contours, hierarchy, thresh, false);
 	vector<Point2f>center(contours.size());
 	vector<float>radius(contours.size());
 	int len = contours.size();
 	for (int i = 0; i < len; i++)
 	{
 		minEnclosingCircle(contours[i], center[i], radius[i]);
-	}
-	for (int i = 0; i< len; i++)
-	{
 		circle(J, center[i], (int)radius[i], Scalar(0, 0, 255), 2, 8, 0);
 	}
 }
@@ -777,7 +774,49 @@ void MyReduceImage::DrawRectOrCircle(const Mat& I, Mat& J, int thresh, int metho
 	case 2:
 		UseMinEnclosingCircle(I, J, thresh);
 		break;
+	case 3:
+		UseFitEllipse(I, J, thresh);
+		break;
+	case 4:
+		FindMoments(I, J, thresh);
+		break;
 	default:
 		break;
+	}
+}
+
+
+// 最小包覆椭圆
+void MyReduceImage::UseFitEllipse(const Mat& I, Mat& J, int thresh)
+{
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	FindAllContours(I, contours, hierarchy, thresh, false);
+	int len = contours.size();
+
+	for (int i = 0; i < len; i++)
+	{
+		// 超过5个点的轮廓才能计算包围其的最小椭圆
+		if(contours[i].size() > 5)
+			ellipse(J, fitEllipse(Mat(contours[i])), Scalar(0,0,255), 2, 8);
+	}
+}
+
+
+// 轮廓矩
+void MyReduceImage::FindMoments(const Mat& I, Mat& J, int thresh)
+{
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	FindAllContours(I, contours, hierarchy, thresh, true);
+	int len = contours.size();
+	vector<Moments> mu(len);
+	vector<Point2f> mc(len);
+	for (int i = 0; i < len; i++)
+	{
+		mu[i] = moments(contours[i], false);
+		mc[i] = Point2f(mu[i].m10 / mu[i].m00, mu[i].m01 / mu[i].m00);
+		drawContours(J, contours, i, Scalar(0, 0, 255), 2, 8, hierarchy, 0, Point());
+		circle(J, mc[i], 4, Scalar(0, 0, 255), -1, 8, 0);
 	}
 }
