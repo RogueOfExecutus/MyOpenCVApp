@@ -3,9 +3,11 @@
 #include <opencv2/opencv.hpp> 
 #include <iostream>
 #include <sstream>
+#include "zbar.h"
 
 using namespace std;
 using namespace cv;
+using namespace zbar;  //添加zbar名称空间 
 
 uchar table[256];
 
@@ -36,14 +38,14 @@ void MyReduceImage::UseLUT(const Mat& I, Mat& J)
 {
 	// TODO: 在此处插入 return 语句
 	//CV_Assert(I.depth() == CV_8U);  // 仅接受uchar图像
-	Mat lookUpTable(1, 256, CV_8UC1,table);
+	Mat lookUpTable(1, 256, CV_8UC1, table);
 	LUT(I, lookUpTable, J);
 	//return J;
 }
 
 
 // 阈值
-void MyReduceImage::UseThreshold(const Mat& I,Mat& J,int threshold_value, int threshold_type)
+void MyReduceImage::UseThreshold(const Mat& I, Mat& J, int threshold_value, int threshold_type)
 {
 	Mat src_gray;
 	if (I.channels() != 1)
@@ -56,16 +58,16 @@ void MyReduceImage::UseThreshold(const Mat& I,Mat& J,int threshold_value, int th
 // 矩阵的掩码操作
 void MyReduceImage::UseFilter2D(const Mat& I, Mat& J)
 {
-	Mat kernel = (Mat_<char>(3, 3) << 0, -1,  0,
-									 -1,  5, -1,
-									  0, -1,  0);
+	Mat kernel = (Mat_<char>(3, 3) << 0, -1, 0,
+		-1, 5, -1,
+		0, -1, 0);
 	filter2D(I, J, I.depth(), kernel);
 }
 
 // 图像求和
 void MyReduceImage::UseAddWeighted(const Mat& I, Mat& K, double alpha, Mat& J)
 {
-	addWeighted(I,alpha,K,(1.0 - alpha),0.0,J);
+	addWeighted(I, alpha, K, (1.0 - alpha), 0.0, J);
 }
 
 // 改变亮度和对比度
@@ -74,7 +76,7 @@ void MyReduceImage::ChangeAlphaBeta(const Mat& I, Mat& J, double alpha, int beta
 	//执行运算new_image(i,j) = alpha * image(i,j) + beta
 	/*for (int i = 0; i < I.rows; i++)
 	{
-		for (int j = 0; j < I.cols; j++) 
+		for (int j = 0; j < I.cols; j++)
 		{
 			for (int k = 0; k < 3; k++)
 			{
@@ -172,7 +174,7 @@ void MyReduceImage::UseBlur(const Mat& I, Mat& J, int filter, int size)
 		Mat kernel = Mat::ones(size, size, CV_32F) / (float)(size*size);
 		filter2D(I, J, -1, kernel, anchor, 0, BORDER_DEFAULT);
 	}
-		break;
+	break;
 	default:
 		break;
 	}
@@ -243,14 +245,14 @@ void MyReduceImage::UseCopyMakeBorder(const Mat& I, Mat& J, Scalar value, int bo
 // 边缘检测
 void MyReduceImage::UseEdgeDetection(const Mat& I, Mat& J, int method)
 {
-	if (method == 2) 
+	if (method == 2)
 	{
 		Mat temp;
 		/// 使用Laplace函数
 		Laplacian(I, temp, CV_16S, 3, 1, 0, BORDER_DEFAULT);
 		convertScaleAbs(temp, J);
 	}
-	else if (method == 3) 
+	else if (method == 3)
 	{
 		Mat temp;
 		/// 使用 3x3内核降噪
@@ -267,10 +269,10 @@ void MyReduceImage::UseEdgeDetection(const Mat& I, Mat& J, int method)
 			Sobel(I, grad_x, CV_16S, 1, 0, 3, 1, 0, BORDER_DEFAULT);
 			Sobel(I, grad_y, CV_16S, 0, 1, 3, 1, 0, BORDER_DEFAULT);
 		}
-		else if(method == 1)
+		else if (method == 1)
 		{
-			Scharr(I, grad_x, CV_16S, 1, 0, 1, 0, BORDER_DEFAULT );
-			Scharr(I, grad_y, CV_16S, 0, 1, 1, 0, BORDER_DEFAULT );
+			Scharr(I, grad_x, CV_16S, 1, 0, 1, 0, BORDER_DEFAULT);
+			Scharr(I, grad_y, CV_16S, 0, 1, 1, 0, BORDER_DEFAULT);
 		}
 		convertScaleAbs(grad_x, abs_grad_x);
 		convertScaleAbs(grad_y, abs_grad_y);
@@ -280,40 +282,80 @@ void MyReduceImage::UseEdgeDetection(const Mat& I, Mat& J, int method)
 }
 
 // 霍夫线变换
-void MyReduceImage::UseHoughLines(const Mat& I, Mat& J, int method)
+void MyReduceImage::UseHoughLines(const Mat& I, Mat& J, double rho, double theta, int threshold, int method, double minLinLength, double maxLineGap)
 {
 	J = I.clone();
 	Mat temp;
 	if (I.channels() != 1)
 		UseEdgeDetection(I, temp, 3);//canny算子
 	else
+	{
 		temp = J;
+		cvtColor(J, J, CV_GRAY2BGR);
+	}
 	if (method == 0)
 	{
 		vector<Vec2f> lines;
-		HoughLines(temp, lines, 1, CV_PI / 180, 100, 0, 0);
-
+		HoughLines(temp, lines, rho, theta, threshold, 0, 0);
+		//double x = temp.size().width;
+		//double y = temp.size().height;
 		for (size_t i = 0; i < lines.size(); i++)
 		{
-			float rho = lines[i][0], theta = lines[i][1];
+			float r = lines[i][0], theta = lines[i][1];
 			Point pt1, pt2;
 			double a = cos(theta), b = sin(theta);
-			double x0 = a*rho, y0 = b*rho;
+			//double x1 = r / b, x2 = (r - a*y) / b;
+			//double y2 = r / a, y1 = (r - b*x) / a;
+			/*if (x1 > x2)
+			{
+				if (x1 > x)
+				{
+					pt1.x = cvRound(x);
+					pt2.x = cvRound(x2);
+					pt1.y = cvRound((r - b*x) / a);
+					pt2.y = cvRound((r - b*x2) / a);
+				}
+				else
+				{
+					pt1.x = cvRound(x1);
+					pt2.x = cvRound(x);
+					pt1.y = cvRound((r - b*x1) / a);
+					pt2.y = cvRound((r - b*x) / a);
+				}
+			}
+			else
+			{
+				if (x2 > x)
+				{
+					pt1.x = cvRound(x1);
+					pt2.x = cvRound(x);
+					pt1.y = cvRound((r - b*x1) / a);
+					pt2.y = cvRound((r - b*x) / a);
+				}
+				else
+				{
+					pt1.x = cvRound(x);
+					pt2.x = cvRound(x2);
+					pt1.y = cvRound((r - b*x) / a);
+					pt2.y = cvRound((r - b*x2) / a);
+				}
+			}*/
+			double x0 = a*r, y0 = b*r;
 			pt1.x = cvRound(x0 + 1000 * (-b));
 			pt1.y = cvRound(y0 + 1000 * (a));
 			pt2.x = cvRound(x0 - 1000 * (-b));
 			pt2.y = cvRound(y0 - 1000 * (a));
-			line(J, pt1, pt2, Scalar(0, 0, 255), 3, CV_AA);
+			line(J, pt1, pt2, Scalar(0, 0, 255), 1, CV_AA);
 		}
 	}
-	else
+	else if (method == 1)
 	{
 		vector<Vec4i> lines;
-		HoughLinesP(temp, lines, 1, CV_PI / 180, 50, 50, 10);
+		HoughLinesP(temp, lines, rho, theta, threshold, minLinLength, maxLineGap);
 		for (size_t i = 0; i < lines.size(); i++)
 		{
 			Vec4i l = lines[i];
-			line(J, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 255), 3, CV_AA);
+			line(J, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 255), 1, CV_AA);
 		}
 	}
 }
@@ -324,7 +366,7 @@ void MyReduceImage::UseHoughCircles(const Mat& I, Mat& J)
 {
 	J = I.clone();
 	Mat temp;
-	if (I.channels() != 1) 
+	if (I.channels() != 1)
 	{
 		cvtColor(I, temp, CV_BGR2GRAY);
 	}
@@ -352,7 +394,7 @@ void MyReduceImage::UseHoughCircles(const Mat& I, Mat& J)
 // 画矩形
 void MyReduceImage::UseRectangle(Mat& I, Point s, Point e)
 {
-	rectangle(I, s, e, Scalar(0, 0, 255),2,8,0);
+	rectangle(I, s, e, Scalar(0, 0, 255), 2, 8, 0);
 }
 
 
@@ -399,7 +441,7 @@ void MyReduceImage::UseRemap(const Mat& I, Mat& J, int type)
 {
 	map_x.create(I.size(), CV_32FC1);
 	map_y.create(I.size(), CV_32FC1);
-	update_map(type,I.rows,I.cols);
+	update_map(type, I.rows, I.cols);
 	remap(I, J, map_x, map_y, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
 }
 
@@ -457,7 +499,7 @@ void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int bins)
 
 	switch (len)
 	{
-	case 1: 
+	case 1:
 	{
 		// 创建直方图画布
 		int hist_w = 512; int hist_h = 512;
@@ -474,7 +516,7 @@ void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int bins)
 		}
 		histImage.copyTo(J);
 	}
-		break;
+	break;
 	case 3:
 	{
 		normalize(J, J, 0, 1, NORM_MINMAX, -1, Mat());
@@ -497,7 +539,7 @@ void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int bins)
 			}
 		histImg.copyTo(J);
 	}
-		break;
+	break;
 	default:
 		break;
 	}
@@ -506,11 +548,11 @@ void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int bins)
 // 直方图对比
 double MyReduceImage::UseCompareHist(const Mat& I, const Mat& J, int method)
 {
-	if(I.channels() != J.channels())
+	if (I.channels() != J.channels())
 		return 0.0;
 	Mat hist_i, hist_j;
-	UseCalcHist(I, hist_i, 30,32);
-	UseCalcHist(J, hist_j, 30,32);
+	UseCalcHist(I, hist_i, 30, 32);
+	UseCalcHist(J, hist_j, 30, 32);
 	return compareHist(hist_i, hist_j, method);
 }
 
@@ -533,7 +575,7 @@ void MyReduceImage::UseCalcHist(const Mat& I, Mat& J, int hbins, int sbins)
 		const float* histRange_gray = range_b;
 		calcHist(&I, 1, 0, Mat(), J, 1, &histSize, &histRange_gray, uniform, accumulate);
 	}
-		break;
+	break;
 	case 3:
 	{
 		// 通道
@@ -553,7 +595,7 @@ void MyReduceImage::UseCalcHist(const Mat& I, Mat& J, int hbins, int sbins)
 
 		hist.copyTo(J);
 	}
-		break;
+	break;
 	default:
 		break;
 	}
@@ -599,7 +641,7 @@ void MyReduceImage::UseMatchTemplate(const Mat& I, const Mat& templ, Mat& J, int
 
 	normalize(result, result, 0, 1, NORM_MINMAX, -1, Mat());
 
-	Point minLoc; 
+	Point minLoc;
 	Point maxLoc;
 	Point matchLoc;
 
@@ -623,7 +665,7 @@ void MyReduceImage::FindAndDrawContours(const Mat& I, Mat& J, int thresh)
 	vector<Vec4i> hierarchy;
 	FindAllContours(I, contours, hierarchy, thresh, true);
 	RNG rng(12345);
-	for (int i = 0; i< contours.size(); i++)
+	for (int i = 0; i < contours.size(); i++)
 	{
 		Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 		//drawContours(J, contours, i, color, 2, 8, hierarchy, 0, Point());
@@ -646,11 +688,11 @@ void MyReduceImage::FindAllContours(const Mat& I, vector<vector<Point>>& contour
 		cvtColor(I, temp, CV_BGR2GRAY);
 	}
 	UseBlur(temp, temp, 1, 3);
-	if(cannyOrThresh)
+	if (cannyOrThresh)
 		Canny(temp, temp, thresh, thresh * 2, 3);
 	else
 		UseThreshold(temp, temp, thresh, THRESH_BINARY);
-	
+
 	/// 寻找轮廓
 	findContours(temp, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
 }
@@ -674,11 +716,11 @@ void MyReduceImage::FindAndDrawConvexHull(const Mat& I, Mat& J, int thresh, bool
 	vector<vector<Point> > hull(len);
 	FindConvexHull(contours, hull);
 	RNG rng(12345);
-	for (int i = 0; i< len; i++)
+	for (int i = 0; i < len; i++)
 	{
 		Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 		drawContours(J, hull, i, color, 1, 8, vector<Vec4i>(), 0, Point());
-		if(is_draw_contours)
+		if (is_draw_contours)
 			drawContours(J, contours, i, color, 1, 8, vector<Vec4i>(), 0, Point());
 	}
 
@@ -700,7 +742,7 @@ void MyReduceImage::UseApproxPolyDP(const Mat& I, Mat& J, int thresh, bool close
 		approxPolyDP(Mat(contours[i]), contours_poly[i], 3, closed);
 	}
 	RNG rng(12345);
-	for (int i = 0; i< contours.size(); i++)
+	for (int i = 0; i < contours.size(); i++)
 	{
 		Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 		drawContours(J, contours_poly, i, color, 1, 8, vector<Vec4i>(), 0, Point());
@@ -734,11 +776,11 @@ void MyReduceImage::UseMinAreaRect(const Mat& I, Mat& J, int thresh)
 
 	vector<Point2f[4]> vertices(len);//定义矩形的4个顶点
 
-	for (int i = 0; i < len; i++) 
+	for (int i = 0; i < len; i++)
 	{
 		minAreaRect(Mat(contours[i])).points(vertices[i]); //计算矩形的4个顶点
 		for (int j = 0; j < 4; j++)
-			line(J, vertices[i][j], vertices[i][(j+1)%4], Scalar(0, 255, 0));//计算一个，画一个
+			line(J, vertices[i][j], vertices[i][(j + 1) % 4], Scalar(0, 255, 0));//计算一个，画一个
 	}
 }
 
@@ -797,8 +839,8 @@ void MyReduceImage::UseFitEllipse(const Mat& I, Mat& J, int thresh)
 	for (int i = 0; i < len; i++)
 	{
 		// 超过5个点的轮廓才能计算包围其的最小椭圆
-		if(contours[i].size() > 5)
-			ellipse(J, fitEllipse(Mat(contours[i])), Scalar(0,0,255), 2, 8);
+		if (contours[i].size() > 5)
+			ellipse(J, fitEllipse(Mat(contours[i])), Scalar(0, 0, 255), 2, 8);
 	}
 }
 
@@ -819,4 +861,204 @@ void MyReduceImage::FindMoments(const Mat& I, Mat& J, int thresh)
 		drawContours(J, contours, i, Scalar(0, 0, 255), 2, 8, hierarchy, 0, Point());
 		circle(J, mc[i], 4, Scalar(0, 0, 255), -1, 8, 0);
 	}
+}
+
+
+// zbar扫码
+void MyReduceImage::ScanBarCode(const Mat& I, string& type, string& data)
+{
+	Mat temp;
+	if (I.channels() == 1)
+	{
+		I.copyTo(temp);
+	}
+	else
+	{
+		cvtColor(I, temp, CV_BGR2GRAY);
+	}
+
+	ImageScanner scanner;
+	scanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
+
+	int width = temp.cols;
+	int height = temp.rows;
+	uchar *raw = (uchar *)temp.data;
+	Image imageZbar(width, height, "Y800", raw, width * height);//zbar能识别的图像
+
+	scanner.scan(imageZbar); //扫描条码 
+
+	//imageZbar.
+
+	Image::SymbolIterator symbol = imageZbar.symbol_begin();
+	if (imageZbar.symbol_begin() == imageZbar.symbol_end())
+	{
+		//cout << "查询条码失败，请检查图片！" << endl;
+		type = "查询条码失败";
+		data = "请检查图片！";
+
+	}
+	else
+		for (; symbol != imageZbar.symbol_end(); ++symbol)
+		{
+			//cout << "类型：" << endl << symbol->get_type_name() << endl << endl;
+			//cout << "条码：" << endl << symbol->get_data() << endl << endl;
+			type = symbol->get_type_name();
+			data = symbol->get_data();
+		}
+	imageZbar.set_data(NULL, 0);
+}
+
+
+// 寻找二维码轮廓
+void MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, int threshold, Point2f* fourPoint2f)
+{
+	/*Mat temp;
+	if (I.channels() == 1)
+	{
+		I.copyTo(temp);
+	}
+	else
+	{
+		cvtColor(I, temp, CV_BGR2GRAY);
+	}
+	UseThreshold(temp, temp, threshold, THRESH_BINARY);
+	UseBlur(temp, temp, 1, 3);
+	UseEqualizeHist(temp, temp);*/
+	Mat temp;
+	PretreatmentForFindCode(I, temp, threshold, 0, 3);
+
+	Scalar color = Scalar(1, 1, 255);
+	//Mat threshold_output;
+	vector<vector<Point> > contours, contours2;
+	vector<Vec4i> hierarchy;
+	Mat drawing = Mat::zeros(I.size(), CV_8UC3);
+	Mat drawing2 = Mat::zeros(I.size(), CV_8UC3);
+	//UseThreshold(temp, threshold_output, threshold, THRESH_BINARY);
+	imshow("threshold_output", temp);
+	findContours(temp, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_NONE, Point(0, 0));
+
+
+	RNG rng(12345);
+	int c = 0, ic = 0, k = 0, area = 0;
+	//
+	//程序的核心筛选
+	//程序的核心筛选
+	int parentIdx = -1;
+	for (int i = 0; i < contours.size(); i++)
+	{
+		if (hierarchy[i][2] != -1 && ic == 0)
+		{
+			parentIdx = i;
+			ic++;
+		}
+		else if (hierarchy[i][2] != -1)
+		{
+			ic++;
+		}
+		else if (hierarchy[i][2] == -1)
+		{
+			ic = 0;
+			parentIdx = -1;
+		}
+
+
+		if (ic >= 2)
+		{
+			contours2.push_back(contours[parentIdx]);
+			drawContours(drawing, contours, parentIdx, Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255)), 1, 8);
+			ic = 0;
+			parentIdx = -1;
+			area = contourArea(contours[i]);//得出一个二维码定位角的面积，以便计算其边长（area_side）（数据覆盖无所谓，三个定位角中任意一个数据都可以）
+		}
+		imshow("提取前", drawing);
+	}
+	if (contours2.size() > 0)
+	{
+		for (int i = 0; i < contours2.size(); i++)
+			drawContours(drawing2, contours2, i, Scalar(rng.uniform(100, 255), rng.uniform(100, 255), rng.uniform(100, 255)), -1, 4, hierarchy[k][2], 0, Point());
+
+
+		vector<Point> point(contours2.size());
+		for (int i = 0; i < contours2.size(); i++)
+		{
+			point[i] = Center_cal(contours2, i);
+		}
+
+		//area = contourArea(contours2[1]);//为什么这一句和前面一句计算的面积不一样呢
+		int area_side = cvRound(sqrt(double(area)));
+		for (int i = 0; i < contours2.size(); i++)
+		{
+			line(drawing2, point[i%contours2.size()], point[(i + 1) % contours2.size()], color, area_side / 2, 8);
+		}
+
+
+		imshow("提取后", drawing2);
+
+
+		Mat gray_all, threshold_output_all;
+		vector<vector<Point> > contours_all;
+		vector<Vec4i> hierarchy_all;
+		cvtColor(drawing2, gray_all, CV_BGR2GRAY);
+
+
+		UseThreshold(gray_all, threshold_output_all, 45, THRESH_BINARY);
+
+		findContours(threshold_output_all, contours_all, hierarchy_all
+			, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//RETR_EXTERNAL表示只寻找最外层轮廓
+
+
+		//求最小包围矩形，斜的也可以哦
+		RotatedRect rectPoint = minAreaRect(contours_all[0]);
+		//Point2f fourPoint2f[4];
+
+
+		//将rectPoint变量中存储的坐标值放到 fourPoint的数组中  
+		rectPoint.points(fourPoint2f);
+
+
+		for (int i = 0; i < 4; i++)
+		{
+			line(J, fourPoint2f[i % 4], fourPoint2f[(i + 1) % 4]
+				, Scalar(20, 21, 237), 3);
+		}
+	}
+
+}
+
+
+// 寻找..点
+Point MyReduceImage::Center_cal(vector<vector<Point> > contours, int i)
+{
+	int centerx = 0, centery = 0, n = contours[i].size();
+	//在提取的小正方形的边界上每隔周长个像素提取一个点的坐标，求所提取四个点的平均坐标（即为小正方形的大致中心）
+	centerx = (contours[i][n / 4].x + contours[i][n * 2 / 4].x + contours[i][3 * n / 4].x + contours[i][n - 1].x) / 4;
+	centery = (contours[i][n / 4].y + contours[i][n * 2 / 4].y + contours[i][3 * n / 4].y + contours[i][n - 1].y) / 4;
+	Point point1 = Point(centerx, centery);
+	return point1;
+}
+
+
+// 寻找二维码前预处理
+void MyReduceImage::PretreatmentForFindCode(const Mat& I, Mat& J, int threshold, int erode_times, int blur_size)
+{
+	Mat temp;
+	if (I.channels() == 1)
+	{
+		I.copyTo(temp);
+	}
+	else
+	{
+		cvtColor(I, temp, CV_BGR2GRAY);
+	}
+	UseThreshold(temp, temp, threshold, THRESH_BINARY);
+	for (int i = 0; i < erode_times; i++)
+	{
+		UseErosion(temp, temp, 0, 1);
+	}
+	for (int i = 0; i < erode_times; i++)
+	{
+		UseDilation(temp, temp, 0, 1);
+	}
+	UseBlur(temp, temp, 1, blur_size);
+	UseEqualizeHist(temp, J);
 }

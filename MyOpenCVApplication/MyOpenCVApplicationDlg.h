@@ -133,6 +133,9 @@ public:
 	afx_msg void OnCopyCoordinate();
 	afx_msg void OnHandlePart();
 	afx_msg void OnBnClickedMultipleBlend();
+	afx_msg void OnCbnSelchangeMethodOneSelecter();
+	CEdit m_double_one;
+	CEdit m_double_two;
 private:
 	// 显示重映射选项
 	void ShowMethodFifteen();
@@ -167,10 +170,10 @@ private:
 	void ShowMethodTwentyThree();
 	// 隐藏寻找轮廓方法
 	void HideMethodTwentyThree();
+	// 展示寻找凸包方法
 	void ShowMethodTwentyFour();
-public:
+    // 隐藏寻找凸包方法
 	void HideMethodTwentyFour();
-private:
 	CButton m_check_is_draw_contours;
 	// 展示多边形拟合方法
 	void ShowMethodTwentyFive();
@@ -180,4 +183,14 @@ private:
 	void ShowMethodTwentySix();
 	// 隐藏包覆图形方法
 	void HideMethodTwentySix();
+	// 展示寻找二维码方法
+	void ShowMethodTwentyEight();
+	// 隐藏寻找二维码方法
+	void HideMethodTwentyEight();
+	// 展示组合方法
+	void ShowMethodTwentyNine();
+	// 隐藏组合方法
+	void HideMethodTwentyNine();
+	// 点到线的最短距离
+	static double PointToLineDist(double x, double y, double x1, double y1, double x2, double y2);
 };

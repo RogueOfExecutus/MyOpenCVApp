@@ -52,7 +52,7 @@ public:
 	// ±ßÔµ¼ì²â
 	void UseEdgeDetection(const Mat& I, Mat& J, int method);
 	// »ô·òÏß±ä»»
-	void UseHoughLines(const Mat& I, Mat& J, int method);
+	void UseHoughLines(const Mat& I, Mat& J, double rho, double theta, int threshold, int method, double minLinLength = 0.0, double maxLineGap = 0.0);
 	// »ô·òÔ²±ä»»
 	void UseHoughCircles(const Mat& I, Mat& J);
 	// »­¾ØĞÎ
@@ -85,5 +85,14 @@ public:
 	void UseFitEllipse(const Mat& I, Mat& J, int thresh);
 	// ÂÖÀª¾Ø
 	void FindMoments(const Mat& I, Mat& J, int thresh);
+	// zbarÉ¨Âë
+	void ScanBarCode(const Mat& I, std::string& type, std::string& data);
+	// Ñ°ÕÒ¶şÎ¬ÂëÂÖÀª
+	void FindCodeCoutours(const Mat& I, Mat& J, int threshold, Point2f* fourPoint2f);
+	// Ñ°ÕÒ..µã
+	Point Center_cal(std::vector<std::vector<Point> > contours, int i);
+private:
+	// Ñ°ÕÒ¶şÎ¬ÂëÇ°Ô¤´¦Àí
+	void PretreatmentForFindCode(const Mat& I, Mat& J, int threshold, int erode_times, int blur_size);
 };
 

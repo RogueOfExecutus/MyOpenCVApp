@@ -94,6 +94,8 @@ void CMyOpenCVApplicationDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_STATIC_NINE, m_static_nine);
 	DDX_Control(pDX, IDC_MULTIPLE_BLEND, m_multiple_blend);
 	DDX_Control(pDX, IDC_CHECK_DRAW_CONTOURS, m_check_is_draw_contours);
+	DDX_Control(pDX, IDC_EDIT_MIN_LIN_LEN, m_double_one);
+	DDX_Control(pDX, IDC_EDIT_MAX_LINE_GAP, m_double_two);
 }
 
 BEGIN_MESSAGE_MAP(CMyOpenCVApplicationDlg, CDialogEx)
@@ -113,6 +115,7 @@ BEGIN_MESSAGE_MAP(CMyOpenCVApplicationDlg, CDialogEx)
 	ON_COMMAND(ID_COPY_COORDINATE, &CMyOpenCVApplicationDlg::OnCopyCoordinate)
 	ON_COMMAND(ID_HANDLE_PART, &CMyOpenCVApplicationDlg::OnHandlePart)
 	ON_BN_CLICKED(IDC_MULTIPLE_BLEND, &CMyOpenCVApplicationDlg::OnBnClickedMultipleBlend)
+	ON_CBN_SELCHANGE(IDC_METHOD_ONE_SELECTER, &CMyOpenCVApplicationDlg::OnCbnSelchangeMethodOneSelecter)
 END_MESSAGE_MAP()
 
 
@@ -176,7 +179,10 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(23, _T("寻找凸包"));
 	selectMethod.InsertString(24, _T("多边形拟合"));
 	selectMethod.InsertString(25, _T("包覆图形"));
-	selectMethod.InsertString(26, _T("不处理"));
+	selectMethod.InsertString(26, _T("扫码"));
+	selectMethod.InsertString(27, _T("筛选二维码轮廓"));
+	selectMethod.InsertString(28, _T("组合算法"));
+	selectMethod.InsertString(29, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -426,8 +432,28 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 	case 11: 
 		reduceImage.UseEdgeDetection(image_r, J, method_one_selecter.GetCurSel());
 		break;
-	case 12: 
-		reduceImage.UseHoughLines(image_r, J, method_one_selecter.GetCurSel());
+	case 12:
+	{
+		CString str0;
+		m_num_edit.GetWindowTextW(str0);
+		int threshold = _ttoi(str0); 
+		double minLinLength, maxLineGap;
+		if (method_one_selecter.GetCurSel() == 1) 
+		{
+			CString str1;
+			m_double_one.GetWindowTextW(str1);
+			minLinLength = _ttof(str1);
+			CString str2;
+			m_double_one.GetWindowTextW(str2);
+			maxLineGap = _ttof(str2);
+		}
+		else
+		{
+			minLinLength = 0.0;
+			maxLineGap = 0.0;
+		}
+		reduceImage.UseHoughLines(image_r, J, 1, CV_PI/900, threshold, method_one_selecter.GetCurSel(), minLinLength, maxLineGap);
+	}
 		break;
 	case 13:
 		reduceImage.UseHoughCircles(image_r, J);
@@ -540,6 +566,30 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		reduceImage.DrawRectOrCircle(image_r, J, thresh, method_one_selecter.GetCurSel());
 	}
 		break;
+	case 26:
+	{
+		string type;
+		string data;
+		reduceImage.ScanBarCode(image_r, type, data);
+		MessageBoxA(this->GetSafeHwnd(), data.c_str(), type.c_str(),0);
+		J = image_r.clone();
+	}
+		break;
+	case 27:
+	{
+		CString str0;
+		m_num_edit.GetWindowTextW(str0);
+		int thresh = _ttoi(str0);
+		J = image_r.clone();
+		Point2f fourPoint2f[4];
+		reduceImage.FindCodeCoutours(image_r, J, thresh, fourPoint2f);
+	}
+		break;
+	case 28:
+	{
+
+	}
+		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -637,6 +687,14 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		break;
 	case 25:
 		HideMethodTwentySix();
+		break;
+	case 26:
+		break;
+	case 27:
+		HideMethodTwentyEight();
+		break;
+	case 28:
+		HideMethodTwentyNine();
 		break;
 	default:
 		break;
@@ -742,6 +800,17 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		ShowMethodTwentySix();
 		m_last_spin_num = 25;
 		break;
+	case 26:
+		m_last_spin_num = 26;
+		break;
+	case 27:
+		ShowMethodTwentyEight();
+		m_last_spin_num = 27;
+		break;
+	case 28:
+		ShowMethodTwentyNine();
+		m_last_spin_num = 28;
+		break;
 	default:
 		break;
 	}
@@ -775,7 +844,11 @@ void CMyOpenCVApplicationDlg::OnBnClickedButton1()
 {
 	//图像路径
 	String imgFile = OpenImageFile();
-
+	if (imgFile == "no")
+	{
+		MessageBox(_T("打开图片失败"));
+		return;
+	}
 	//读入图像
 	//image_r = imread(imgFile, CV_LOAD_IMAGE_GRAYSCALE);
 	image_r = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
@@ -849,6 +922,10 @@ String CMyOpenCVApplicationDlg::OpenImageFile()
 	if (IDOK == findFileDlg.DoModal())
 	{
 		imgFile = (LPCSTR)(CStringA)(findFileDlg.GetPathName());
+	}
+	else
+	{
+		imgFile = "no";
 	}
 	return imgFile;
 }
@@ -1043,6 +1120,8 @@ void CMyOpenCVApplicationDlg::HideMethodTwelve()
 // 显示霍夫线变换选项
 void CMyOpenCVApplicationDlg::ShowMethodThirteen()
 {
+	m_num_edit.ShowWindow(SW_SHOW);
+	m_spin_one.ShowWindow(SW_SHOW);
 	method_one_selecter.ShowWindow(SW_SHOW);
 	method_one_selecter.InsertString(0, _T("标准霍夫线变换"));
 	method_one_selecter.InsertString(1, _T("统计概率霍夫线变换"));
@@ -1053,6 +1132,10 @@ void CMyOpenCVApplicationDlg::ShowMethodThirteen()
 // 隐藏霍夫线变换选项
 void CMyOpenCVApplicationDlg::HideMethodThirteen()
 {
+	m_num_edit.ShowWindow(SW_HIDE);
+	m_spin_one.ShowWindow(SW_HIDE); 
+	m_double_one.ShowWindow(SW_HIDE);
+	m_double_two.ShowWindow(SW_HIDE);
 	method_one_selecter.ShowWindow(SW_HIDE);
 	method_one_selecter.ResetContent();
 }
@@ -1452,4 +1535,70 @@ void CMyOpenCVApplicationDlg::HideMethodTwentySix()
 	m_spin_one.ShowWindow(SW_HIDE);
 	method_one_selecter.ShowWindow(SW_HIDE);
 	method_one_selecter.ResetContent();
+}
+
+
+void CMyOpenCVApplicationDlg::OnCbnSelchangeMethodOneSelecter()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	if (m_last_spin_num != 12)
+		return;
+	if (method_one_selecter.GetCurSel() == 1) 
+	{
+		m_double_one.ShowWindow(SW_SHOW);
+		m_double_two.ShowWindow(SW_SHOW);
+	}
+	else
+	{
+		m_double_one.ShowWindow(SW_HIDE);
+		m_double_two.ShowWindow(SW_HIDE);
+	}
+}
+
+
+// 展示寻找二维码方法
+void CMyOpenCVApplicationDlg::ShowMethodTwentyEight()
+{
+	m_num_edit.ShowWindow(SW_SHOW);
+	m_spin_one.ShowWindow(SW_SHOW);
+}
+
+
+// 隐藏寻找二维码方法
+void CMyOpenCVApplicationDlg::HideMethodTwentyEight()
+{
+	m_num_edit.ShowWindow(SW_HIDE);
+	m_spin_one.ShowWindow(SW_HIDE);
+}
+
+
+// 展示组合方法
+void CMyOpenCVApplicationDlg::ShowMethodTwentyNine()
+{
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.InsertString(0, _T("二维码判定"));
+	method_one_selecter.SetCurSel(0);
+}
+
+
+// 隐藏组合方法
+void CMyOpenCVApplicationDlg::HideMethodTwentyNine()
+{
+	method_one_selecter.ShowWindow(SW_HIDE);
+	method_one_selecter.ResetContent();
+}
+
+
+// 点到线的最短距离
+double CMyOpenCVApplicationDlg::PointToLineDist(double x, double y, double x1, double y1, double x2, double y2)
+{
+	//向量内积，向量1为点1到点，向量2为点1到点2
+	double cross = (x2 - x1) * (x - x1) + (y2 - y1) * (y - y1);
+	//向量2的长度的平方
+	double d2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+	//r为向量1在向量2上投影向量与向量2的比值，方向相反则为负数
+	double r = cross / d2;
+	double px = x1 + (x2 - x1) * r;
+	double py = y1 + (y2 - y1) * r;
+	return sqrt((x - px) * (x - px) + (y - py) * (y - py));
 }
