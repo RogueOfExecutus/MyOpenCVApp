@@ -96,6 +96,7 @@ void CMyOpenCVApplicationDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_CHECK_DRAW_CONTOURS, m_check_is_draw_contours);
 	DDX_Control(pDX, IDC_EDIT_MIN_LIN_LEN, m_double_one);
 	DDX_Control(pDX, IDC_EDIT_MAX_LINE_GAP, m_double_two);
+	DDX_Control(pDX, IDC_BUTTON_CONFIG, m_config_bt);
 }
 
 BEGIN_MESSAGE_MAP(CMyOpenCVApplicationDlg, CDialogEx)
@@ -116,6 +117,7 @@ BEGIN_MESSAGE_MAP(CMyOpenCVApplicationDlg, CDialogEx)
 	ON_COMMAND(ID_HANDLE_PART, &CMyOpenCVApplicationDlg::OnHandlePart)
 	ON_BN_CLICKED(IDC_MULTIPLE_BLEND, &CMyOpenCVApplicationDlg::OnBnClickedMultipleBlend)
 	ON_CBN_SELCHANGE(IDC_METHOD_ONE_SELECTER, &CMyOpenCVApplicationDlg::OnCbnSelchangeMethodOneSelecter)
+	ON_BN_CLICKED(IDC_BUTTON_CONFIG, &CMyOpenCVApplicationDlg::OnBnClickedButtonConfig)
 END_MESSAGE_MAP()
 
 
@@ -214,6 +216,8 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	HWND hParent_s = ::GetParent(hWnd_s);
 	::SetParent(hWnd_s, GetDlgItem(IDC_SHOWIMAGE)->m_hWnd);
 	::ShowWindow(hParent_s, SW_HIDE);
+
+	initLineConfig();
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -587,7 +591,18 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		break;
 	case 28:
 	{
-
+		J = image_r.clone();
+		Point2f fourPoint2f[4];
+		Mat code(image_r, Rect(1371, 403, 418, 379));
+		reduceImage.FindCodeCoutours(code, J, 100, fourPoint2f);
+		Mat Rline(image_r, Rect(2147, 467, 300, 328));
+		Vec4i Rl;
+		reduceImage.PretreatmentForFindLine(Rline, RLineConfig, Rl);
+		line(J, Point(Rl[0] + 2147,Rl[1] + 467), Point(Rl[2] + 2147, Rl[3] + 467), Scalar(0, 0, 255), 3);
+		Mat Dline(image_r, Rect(976, 1641, 303, 246));
+		Vec4i Dl;
+		reduceImage.PretreatmentForFindLine(Dline, DLineConfig, Dl);
+		line(J, Point(Dl[0] + 976, Dl[1] + 1641), Point(Dl[2] + 976, Dl[3] + 1641), Scalar(0, 0, 255), 3);
 	}
 		break;
 	default:
@@ -1575,6 +1590,7 @@ void CMyOpenCVApplicationDlg::HideMethodTwentyEight()
 // 展示组合方法
 void CMyOpenCVApplicationDlg::ShowMethodTwentyNine()
 {
+	m_config_bt.ShowWindow(SW_SHOW);
 	method_one_selecter.ShowWindow(SW_SHOW);
 	method_one_selecter.InsertString(0, _T("二维码判定"));
 	method_one_selecter.SetCurSel(0);
@@ -1584,21 +1600,51 @@ void CMyOpenCVApplicationDlg::ShowMethodTwentyNine()
 // 隐藏组合方法
 void CMyOpenCVApplicationDlg::HideMethodTwentyNine()
 {
+	m_config_bt.ShowWindow(SW_HIDE);
 	method_one_selecter.ShowWindow(SW_HIDE);
 	method_one_selecter.ResetContent();
 }
 
 
 // 点到线的最短距离
-double CMyOpenCVApplicationDlg::PointToLineDist(double x, double y, double x1, double y1, double x2, double y2)
+Point CMyOpenCVApplicationDlg::PointToLineDist(Point p, Point p1, Point p2)
 {
+	Point result;
 	//向量内积，向量1为点1到点，向量2为点1到点2
-	double cross = (x2 - x1) * (x - x1) + (y2 - y1) * (y - y1);
+	double cross = (p2.x - p1.x) * (p.x - p1.x) + (p2.y - p1.y) * (p.y -p1.y);
 	//向量2的长度的平方
-	double d2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+	double d2 = (p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y);
 	//r为向量1在向量2上投影向量与向量2的比值，方向相反则为负数
 	double r = cross / d2;
-	double px = x1 + (x2 - x1) * r;
-	double py = y1 + (y2 - y1) * r;
-	return sqrt((x - px) * (x - px) + (y - py) * (y - py));
+	result.x = p1.x + (p2.x - p1.x) * r;
+	result.y = p1.y + (p2.y - p1.y) * r;
+	return result;
+		//sqrt((p.x - result.x) * (p.x - result.x) + (p.y - result.y) * (p.y - result.y));
+}
+
+
+void CMyOpenCVApplicationDlg::OnBnClickedButtonConfig()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+// 找线参数初始化
+void CMyOpenCVApplicationDlg::initLineConfig()
+{
+	RLineConfig.canny_size = 3;
+	RLineConfig.line_direction = true;
+	RLineConfig.maxLineGap = 20;
+	RLineConfig.minLinLength = 200;
+	RLineConfig.threshold = 40;
+	RLineConfig.threshold1 = 80;
+	RLineConfig.threshold2 = 200;
+
+	DLineConfig.canny_size = 3;
+	DLineConfig.line_direction = false;
+	DLineConfig.maxLineGap = 20;
+	DLineConfig.minLinLength = 200;
+	DLineConfig.threshold = 40;
+	DLineConfig.threshold1 = 80;
+	DLineConfig.threshold2 = 200;
 }

@@ -3,6 +3,16 @@
 
 using namespace cv;
 
+struct configForLine {
+	int threshold;
+	double threshold1;
+	double threshold2;
+	int canny_size;
+	double minLinLength;
+	double maxLineGap;
+	bool line_direction;
+};
+
 class MyReduceImage
 {
 private:
@@ -94,5 +104,8 @@ public:
 private:
 	// 寻找二维码前预处理
 	void PretreatmentForFindCode(const Mat& I, Mat& J, int threshold, int erode_times, int blur_size);
+public:
+	// 寻找直线前预处理
+	void PretreatmentForFindLine(const Mat& I, configForLine config, Vec4i& l);
 };
 

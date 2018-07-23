@@ -192,5 +192,13 @@ private:
 	// 隐藏组合方法
 	void HideMethodTwentyNine();
 	// 点到线的最短距离
-	static double PointToLineDist(double x, double y, double x1, double y1, double x2, double y2);
+	static Point PointToLineDist(Point p, Point p1, Point p2);
+public:
+	afx_msg void OnBnClickedButtonConfig();
+private:
+	CButton m_config_bt;
+	configForLine RLineConfig;
+	configForLine DLineConfig;
+	// 找线参数初始化
+	void initLineConfig();
 };

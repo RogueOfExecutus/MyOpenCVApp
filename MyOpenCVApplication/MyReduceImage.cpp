@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include "zbar.h"
+#include "MyOpenCVApplicationDlg.h"
 
 using namespace std;
 using namespace cv;
@@ -352,10 +353,11 @@ void MyReduceImage::UseHoughLines(const Mat& I, Mat& J, double rho, double theta
 	{
 		vector<Vec4i> lines;
 		HoughLinesP(temp, lines, rho, theta, threshold, minLinLength, maxLineGap);
+		Scalar color[3] = {Scalar(0,0,255),Scalar(0,255,0), Scalar(255,0,0)};
 		for (size_t i = 0; i < lines.size(); i++)
 		{
 			Vec4i l = lines[i];
-			line(J, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 255), 1, CV_AA);
+			line(J, Point(l[0], l[1]), Point(l[2], l[3]), color[i%3], 1, CV_AA);
 		}
 	}
 }
@@ -924,6 +926,8 @@ void MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, int threshold, Point2
 	UseThreshold(temp, temp, threshold, THRESH_BINARY);
 	UseBlur(temp, temp, 1, 3);
 	UseEqualizeHist(temp, temp);*/
+	if (J.channels() == 1)
+		cvtColor(J, J, CV_GRAY2BGR);
 	Mat temp;
 	PretreatmentForFindCode(I, temp, threshold, 0, 3);
 
@@ -1018,8 +1022,7 @@ void MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, int threshold, Point2
 
 		for (int i = 0; i < 4; i++)
 		{
-			line(J, fourPoint2f[i % 4], fourPoint2f[(i + 1) % 4]
-				, Scalar(20, 21, 237), 3);
+			line(J, fourPoint2f[i % 4], fourPoint2f[(i + 1) % 4], Scalar(20, 21, 237), 3);
 		}
 	}
 
@@ -1061,4 +1064,34 @@ void MyReduceImage::PretreatmentForFindCode(const Mat& I, Mat& J, int threshold,
 	}
 	UseBlur(temp, temp, 1, blur_size);
 	UseEqualizeHist(temp, J);
+}
+
+
+// 寻找直线前预处理
+void MyReduceImage::PretreatmentForFindLine(const Mat& I, configForLine config, Vec4i& l)
+{
+	Mat temp;
+	if (I.channels() == 1)
+	{
+		I.copyTo(temp);
+	}
+	else
+	{
+		cvtColor(I, temp, CV_BGR2GRAY);
+	}
+	//阈值
+	UseThreshold(temp, temp, config.threshold, THRESH_BINARY);
+	//边缘检测
+	Canny(temp, temp, config.threshold1, config.threshold2, config.canny_size);
+	vector<Vec4i> lines;
+	HoughLinesP(temp, lines, 1, CV_PI/1800, 100, config.minLinLength, config.maxLineGap);
+	//正、负方向寻找直线
+	if (config.line_direction) 
+	{
+		l = lines[0];
+	}
+	else
+	{
+		l = lines.back();
+	}
 }
