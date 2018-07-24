@@ -13,6 +13,14 @@ struct configForLine {
 	bool line_direction;
 };
 
+struct configForScan {
+	int threshold;
+	bool isErosion;
+	int ErosionTimes;
+	int ErosionSize;
+	int ErosionMethod;
+};
+
 class MyReduceImage
 {
 private:
@@ -98,7 +106,7 @@ public:
 	// zbar扫码
 	void ScanBarCode(const Mat& I, std::string& type, std::string& data);
 	// 寻找二维码轮廓
-	void FindCodeCoutours(const Mat& I, Mat& J, int threshold, Point2f* fourPoint2f);
+	void FindCodeCoutours(const Mat& I, Mat& J, int threshold, RotatedRect& rotatedRect);
 	// 寻找..点
 	Point Center_cal(std::vector<std::vector<Point> > contours, int i);
 private:
@@ -107,5 +115,7 @@ private:
 public:
 	// 寻找直线前预处理
 	void PretreatmentForFindLine(const Mat& I, configForLine config, Vec4i& l);
+	// 扫码前预处理
+	void PretreatmentForScanCode(const Mat& I, Mat& J, configForScan config);
 };
 

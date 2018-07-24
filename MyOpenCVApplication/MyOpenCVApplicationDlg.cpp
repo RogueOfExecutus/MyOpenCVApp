@@ -585,24 +585,70 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		m_num_edit.GetWindowTextW(str0);
 		int thresh = _ttoi(str0);
 		J = image_r.clone();
-		Point2f fourPoint2f[4];
-		reduceImage.FindCodeCoutours(image_r, J, thresh, fourPoint2f);
+		RotatedRect rotatedRect;
+		reduceImage.FindCodeCoutours(image_r, J, thresh, rotatedRect);
 	}
 		break;
 	case 28:
 	{
 		J = image_r.clone();
-		Point2f fourPoint2f[4];
+		if (J.channels() == 1)
+			cvtColor(J, J, CV_GRAY2BGR);
+		RotatedRect rotatedRect;
 		Mat code(image_r, Rect(1371, 403, 418, 379));
-		reduceImage.FindCodeCoutours(code, J, 100, fourPoint2f);
+		Mat temp = code.clone();
+		reduceImage.FindCodeCoutours(code, temp, 100, rotatedRect);
+		Rect tempRect = rotatedRect.boundingRect();
+		Rect scanRect = Rect(tempRect.x + 1371, tempRect.y + 403, tempRect.width, tempRect.height);
+		Mat ScanRect = Mat(image_r, scanRect).clone();
+		reduceImage.PretreatmentForScanCode(ScanRect, ScanRect, ScanConfig);
+
+		string type;
+		string data;
+		reduceImage.ScanBarCode(ScanRect, type, data);
+		if (type == "查询条码失败")
+		{
+			MessageBox(_T("error code"));
+			break;
+		}
+		Point2f fourPoint2f[4];
+
+		/** returns 4 vertices of the rectangle
+		@param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
+		*/
+		//将rectPoint变量中存储的坐标值放到 fourPoint的数组中  
+		rotatedRect.points(fourPoint2f);
+
+		Point Rmid1 = FindMidPoint(fourPoint2f[2], fourPoint2f[3], 1371, 403);
 		Mat Rline(image_r, Rect(2147, 467, 300, 328));
 		Vec4i Rl;
 		reduceImage.PretreatmentForFindLine(Rline, RLineConfig, Rl);
-		line(J, Point(Rl[0] + 2147,Rl[1] + 467), Point(Rl[2] + 2147, Rl[3] + 467), Scalar(0, 0, 255), 3);
+		Point R1 = Point(Rl[0] + 2147, Rl[1] + 467);
+		Point R2 = Point(Rl[2] + 2147, Rl[3] + 467);
+		Point Rmid2 = PointToLineDist(Rmid1, R1, R2);
+		line(J, R1, R2, Scalar(0, 0, 255), 5);
+		line(J, Rmid1, Rmid2, Scalar(0, 0, 255), 5);
+		double Rlen = GetLineLenght(Rmid1,Rmid2, 37.0, 37.0);
+		double CRlen = GetLineLenght(fourPoint2f[2], fourPoint2f[3], 37.0, 37.0);
+
+		Point Dmid1 = FindMidPoint(fourPoint2f[0], fourPoint2f[3], 1371, 403);
 		Mat Dline(image_r, Rect(976, 1641, 303, 246));
 		Vec4i Dl;
 		reduceImage.PretreatmentForFindLine(Dline, DLineConfig, Dl);
-		line(J, Point(Dl[0] + 976, Dl[1] + 1641), Point(Dl[2] + 976, Dl[3] + 1641), Scalar(0, 0, 255), 3);
+		Point D1 = Point(Dl[0] + 976, Dl[1] + 1641);
+		Point D2 = Point(Dl[2] + 976, Dl[3] + 1641);
+		Point Dmid2 = PointToLineDist(Dmid1, D1, D2);
+		line(J, D1, D2, Scalar(0, 0, 255), 5);
+		line(J, Dmid1, Dmid2, Scalar(0, 0, 255), 5);
+		double Dlen = GetLineLenght(Dmid1, Dmid2, 37.0, 37.0);
+		double CDlen = GetLineLenght(fourPoint2f[0], fourPoint2f[3], 37.0, 37.0);
+		
+		float angle = rotatedRect.angle;
+		CString info;
+		info.Format(_T("条码类型：%s\n条码：%s\n码高：%.3lf\n码宽：%.3lf\n右距离：%.3lf\n左距离：%.3lf\n角度：%f"),
+			CStringW(type.c_str()), CStringW(data.c_str()), CRlen, CDlen, Rlen, Dlen, angle);
+		imshow(showWindowName, J);
+		MessageBox(info);
 	}
 		break;
 	default:
@@ -1643,8 +1689,30 @@ void CMyOpenCVApplicationDlg::initLineConfig()
 	DLineConfig.canny_size = 3;
 	DLineConfig.line_direction = false;
 	DLineConfig.maxLineGap = 20;
-	DLineConfig.minLinLength = 200;
-	DLineConfig.threshold = 40;
+	DLineConfig.minLinLength = 50;
+	DLineConfig.threshold = 35;
 	DLineConfig.threshold1 = 80;
 	DLineConfig.threshold2 = 200;
+
+	ScanConfig.ErosionMethod = 0;
+	ScanConfig.ErosionSize = 1;
+	ScanConfig.ErosionTimes = 1;
+	ScanConfig.isErosion = false;
+	ScanConfig.threshold = 100;
+}
+
+
+Point CMyOpenCVApplicationDlg::FindMidPoint(Point p1, Point p2, int x_offset, int y_offset)
+{
+	return Point((p1.x + p2.x) / 2 + x_offset, (p1.y + p2.y) / 2 + y_offset);
+}
+
+
+double CMyOpenCVApplicationDlg::GetLineLenght(Point p1, Point p2, double x_proportion, double y_proportion)
+{
+	double x1 = p1.x / x_proportion;
+	double x2 = p2.x / x_proportion;
+	double y1 = p1.y / y_proportion;
+	double y2 = p2.y / y_proportion;
+	return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }

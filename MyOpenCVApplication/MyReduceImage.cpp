@@ -912,7 +912,7 @@ void MyReduceImage::ScanBarCode(const Mat& I, string& type, string& data)
 
 
 // 寻找二维码轮廓
-void MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, int threshold, Point2f* fourPoint2f)
+void MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, int threshold, RotatedRect& rotatedRect)
 {
 	/*Mat temp;
 	if (I.channels() == 1)
@@ -926,8 +926,6 @@ void MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, int threshold, Point2
 	UseThreshold(temp, temp, threshold, THRESH_BINARY);
 	UseBlur(temp, temp, 1, 3);
 	UseEqualizeHist(temp, temp);*/
-	if (J.channels() == 1)
-		cvtColor(J, J, CV_GRAY2BGR);
 	Mat temp;
 	PretreatmentForFindCode(I, temp, threshold, 0, 3);
 
@@ -969,7 +967,7 @@ void MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, int threshold, Point2
 		if (ic >= 2)
 		{
 			contours2.push_back(contours[parentIdx]);
-			drawContours(drawing, contours, parentIdx, Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255)), 1, 8);
+			drawContours(drawing, contours, parentIdx, Scalar(0, 255, 0), 1, 8);
 			ic = 0;
 			parentIdx = -1;
 			area = contourArea(contours[i]);//得出一个二维码定位角的面积，以便计算其边长（area_side）（数据覆盖无所谓，三个定位角中任意一个数据都可以）
@@ -979,7 +977,7 @@ void MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, int threshold, Point2
 	if (contours2.size() > 0)
 	{
 		for (int i = 0; i < contours2.size(); i++)
-			drawContours(drawing2, contours2, i, Scalar(rng.uniform(100, 255), rng.uniform(100, 255), rng.uniform(100, 255)), -1, 4, hierarchy[k][2], 0, Point());
+			drawContours(drawing2, contours2, i, Scalar(0, 0, 255), 1, 4, hierarchy[k][2], 0, Point());
 
 
 		vector<Point> point(contours2.size());
@@ -1012,13 +1010,14 @@ void MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, int threshold, Point2
 
 
 		//求最小包围矩形，斜的也可以哦
-		RotatedRect rectPoint = minAreaRect(contours_all[0]);
-		//Point2f fourPoint2f[4];
+		rotatedRect = minAreaRect(contours_all[0]);
+		Point2f fourPoint2f[4];
 
-
+		/** returns 4 vertices of the rectangle
+		@param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
+		*/
 		//将rectPoint变量中存储的坐标值放到 fourPoint的数组中  
-		rectPoint.points(fourPoint2f);
-
+		rotatedRect.points(fourPoint2f);
 
 		for (int i = 0; i < 4; i++)
 		{
@@ -1093,5 +1092,31 @@ void MyReduceImage::PretreatmentForFindLine(const Mat& I, configForLine config, 
 	else
 	{
 		l = lines.back();
+	}
+}
+
+
+// 扫码前预处理
+void MyReduceImage::PretreatmentForScanCode(const Mat& I, Mat& J, configForScan config)
+{
+	if (I.channels() == 1)
+	{
+		I.copyTo(J);
+	}
+	else
+	{
+		cvtColor(I, J, CV_BGR2GRAY);
+	}
+	UseThreshold(J, J, config.threshold, 0);
+	if (config.isErosion)
+	{
+		for (int i = 0; i < config.ErosionTimes; i++)
+		{
+			UseDilation(J, J, config.ErosionMethod, config.ErosionSize);
+		}
+		for (int i = 0; i < config.ErosionTimes; i++)
+		{
+			UseErosion(J, J, config.ErosionMethod, config.ErosionSize);
+		}
 	}
 }

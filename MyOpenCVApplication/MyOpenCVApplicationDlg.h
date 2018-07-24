@@ -201,4 +201,7 @@ private:
 	configForLine DLineConfig;
 	// 找线参数初始化
 	void initLineConfig();
+	configForScan ScanConfig;
+	static Point FindMidPoint(Point p1, Point p2, int x_offset, int y_offset);
+	static double GetLineLenght(Point p1, Point p2, double x_proportion, double y_proportion);
 };
