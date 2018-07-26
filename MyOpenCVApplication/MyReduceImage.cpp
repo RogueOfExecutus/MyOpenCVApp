@@ -895,8 +895,7 @@ void MyReduceImage::ScanBarCode(const Mat& I, string& type, string& data)
 	if (imageZbar.symbol_begin() == imageZbar.symbol_end())
 	{
 		//cout << "≤È—ØÃı¬Î ß∞‹£¨«ÎºÏ≤ÈÕº∆¨£°" << endl;
-		type = "≤È—ØÃı¬Î ß∞‹";
-		data = "«ÎºÏ≤ÈÕº∆¨£°";
+		data = "≤È—ØÃı¬Î ß∞‹,«ÎºÏ≤ÈÕº∆¨£°";
 
 	}
 	else
@@ -912,7 +911,7 @@ void MyReduceImage::ScanBarCode(const Mat& I, string& type, string& data)
 
 
 // —∞’“∂˛Œ¨¬Î¬÷¿™
-void MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, int threshold, RotatedRect& rotatedRect)
+bool MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, configForCode config, RotatedRect& rotatedRect)
 {
 	/*Mat temp;
 	if (I.channels() == 1)
@@ -927,7 +926,7 @@ void MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, int threshold, Rotate
 	UseBlur(temp, temp, 1, 3);
 	UseEqualizeHist(temp, temp);*/
 	Mat temp;
-	PretreatmentForFindCode(I, temp, threshold, 0, 3);
+	PretreatmentForFindCode(I, temp, config);
 
 	Scalar color = Scalar(1, 1, 255);
 	//Mat threshold_output;
@@ -1023,8 +1022,9 @@ void MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, int threshold, Rotate
 		{
 			line(J, fourPoint2f[i % 4], fourPoint2f[(i + 1) % 4], Scalar(20, 21, 237), 3);
 		}
+		return true;
 	}
-
+	return false;
 }
 
 
@@ -1041,7 +1041,7 @@ Point MyReduceImage::Center_cal(vector<vector<Point> > contours, int i)
 
 
 // —∞’“∂˛Œ¨¬Î«∞‘§¥¶¿Ì
-void MyReduceImage::PretreatmentForFindCode(const Mat& I, Mat& J, int threshold, int erode_times, int blur_size)
+void MyReduceImage::PretreatmentForFindCode(const Mat& I, Mat& J, configForCode config)
 {
 	Mat temp;
 	if (I.channels() == 1)
@@ -1052,22 +1052,23 @@ void MyReduceImage::PretreatmentForFindCode(const Mat& I, Mat& J, int threshold,
 	{
 		cvtColor(I, temp, CV_BGR2GRAY);
 	}
-	UseThreshold(temp, temp, threshold, THRESH_BINARY);
-	for (int i = 0; i < erode_times; i++)
+	UseThreshold(temp, temp, config.threshold, THRESH_BINARY);
+	for (int i = 0; i < config.ErosionTimes; i++)
 	{
-		UseErosion(temp, temp, 0, 1);
+		UseErosion(temp, temp, config.ErosionMethod, config.ErosionSize);
 	}
-	for (int i = 0; i < erode_times; i++)
+	for (int i = 0; i < config.ErosionTimes; i++)
 	{
-		UseDilation(temp, temp, 0, 1);
+		UseDilation(temp, temp, config.ErosionMethod, config.ErosionSize);
 	}
-	UseBlur(temp, temp, 1, blur_size);
+	if(config.BlurSize)
+		UseBlur(temp, temp, 1, config.BlurSize);
 	UseEqualizeHist(temp, J);
 }
 
 
 // —∞’“÷±œﬂ«∞‘§¥¶¿Ì
-void MyReduceImage::PretreatmentForFindLine(const Mat& I, configForLine config, Vec4i& l)
+bool MyReduceImage::PretreatmentForFindLine(const Mat& I, configForLine config, Vec4i& l)
 {
 	Mat temp;
 	if (I.channels() == 1)
@@ -1085,6 +1086,8 @@ void MyReduceImage::PretreatmentForFindLine(const Mat& I, configForLine config, 
 	vector<Vec4i> lines;
 	HoughLinesP(temp, lines, 1, CV_PI/1800, 100, config.minLinLength, config.maxLineGap);
 	//’˝°¢∏∫∑ΩœÚ—∞’“÷±œﬂ
+	if (lines.size() == 0)
+		return false;
 	if (config.line_direction) 
 	{
 		l = lines[0];
@@ -1093,6 +1096,7 @@ void MyReduceImage::PretreatmentForFindLine(const Mat& I, configForLine config, 
 	{
 		l = lines.back();
 	}
+	return true;
 }
 
 
@@ -1108,7 +1112,7 @@ void MyReduceImage::PretreatmentForScanCode(const Mat& I, Mat& J, configForScan 
 		cvtColor(I, J, CV_BGR2GRAY);
 	}
 	UseThreshold(J, J, config.threshold, 0);
-	if (config.isErosion)
+	if (config.ErosionTimes)
 	{
 		for (int i = 0; i < config.ErosionTimes; i++)
 		{
@@ -1118,5 +1122,92 @@ void MyReduceImage::PretreatmentForScanCode(const Mat& I, Mat& J, configForScan 
 		{
 			UseErosion(J, J, config.ErosionMethod, config.ErosionSize);
 		}
+	}
+}
+
+
+// HarrisΩ«µ„ºÏ≤‚
+void MyReduceImage::UseCornerHarris(const Mat& I, Mat& dst_norm, Mat& dst_norm_scaled, int blockSize, int apertureSize, double k)
+{
+	Mat temp;
+	if (I.channels() == 1)
+	{
+		I.copyTo(temp);
+	}
+	else
+	{
+		cvtColor(I, temp, CV_BGR2GRAY);
+	}
+	Mat dst = Mat::zeros(I.size(), CV_32FC1);
+
+	/// Detector parameters
+
+	/// Detecting corners
+	cornerHarris(I, dst, blockSize, apertureSize, k, BORDER_DEFAULT);
+
+	/// Normalizing
+	normalize(dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
+	convertScaleAbs(dst_norm, dst_norm_scaled);
+}
+
+
+// ªÊª≠Ω«µ„
+void MyReduceImage::DrawCornerHarris(const Mat& I, Mat& J, int blockSize, int apertureSize, double k, int thresh)
+{
+	Mat dst_norm;
+	UseCornerHarris(I, dst_norm, J, blockSize, apertureSize, k);
+	/// Drawing a circle around corners
+	for (int j = 0; j < dst_norm.rows; j++)
+	{
+		for (int i = 0; i < dst_norm.cols; i++)
+		{
+			if ((int)dst_norm.at<float>(j, i) > thresh)
+			{
+				circle(J, Point(i, j), 5, Scalar(0), 2, 8, 0);
+			}
+		}
+	}
+}
+
+
+// Shi-TomasiΩ«µ„ºÏ≤‚
+void MyReduceImage::UseGoodFeaturesToTrack(const Mat& I, vector<Point2f>& corners, int maxCorners, double qualityLevel, double minDistance, int blockSize, bool useHarrisDetector, double k)
+{
+	Mat temp;
+	if (I.channels() == 1)
+	{
+		I.copyTo(temp);
+	}
+	else
+	{
+		cvtColor(I, temp, CV_BGR2GRAY);
+	}
+	if (maxCorners < 1)  
+		maxCorners = 1; 
+	goodFeaturesToTrack(temp,
+		corners,
+		maxCorners,
+		qualityLevel,
+		minDistance,
+		Mat(),
+		blockSize,
+		useHarrisDetector,
+		k);
+}
+
+
+// ªÊª≠Shi-TomasiΩ«µ„ºÏ≤‚
+void MyReduceImage::DrawCorners(const Mat& I, Mat& J, int maxCorners, double qualityLevel, double minDistance, int blockSize, bool useHarrisDetector, double k)
+{
+	J = I.clone();
+	if (J.channels() == 1)
+		cvtColor(J, J, CV_GRAY2BGR);
+	vector<Point2f> corners;
+	RNG rng(12345);
+	UseGoodFeaturesToTrack(I, corners, maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
+	for (int i = 0; i < corners.size(); i++)
+	{
+		circle(J, corners[i], 4, Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
+			rng.uniform(0, 255)), -1, 8, 0);
 	}
 }

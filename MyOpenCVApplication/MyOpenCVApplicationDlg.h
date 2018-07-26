@@ -204,4 +204,11 @@ private:
 	configForScan ScanConfig;
 	static Point FindMidPoint(Point p1, Point p2, int x_offset, int y_offset);
 	static double GetLineLenght(Point p1, Point p2, double x_proportion, double y_proportion);
+	// 二维码判定
+	void CodeJudgement(Mat& J);
+	configForCode codeConfig;
+	// 展示角点检测方法
+	void ShowMethodThirty();
+	// 隐藏角点检测方法
+	void HideMethodThirty();
 };

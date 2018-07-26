@@ -15,10 +15,17 @@ struct configForLine {
 
 struct configForScan {
 	int threshold;
-	bool isErosion;
 	int ErosionTimes;
 	int ErosionSize;
 	int ErosionMethod;
+};
+
+struct configForCode {
+	int threshold;
+	int ErosionTimes;
+	int ErosionSize;
+	int ErosionMethod;
+	int BlurSize;
 };
 
 class MyReduceImage
@@ -106,16 +113,24 @@ public:
 	// zbar…®¬Î
 	void ScanBarCode(const Mat& I, std::string& type, std::string& data);
 	// —∞’“∂˛Œ¨¬Î¬÷¿™
-	void FindCodeCoutours(const Mat& I, Mat& J, int threshold, RotatedRect& rotatedRect);
+	bool FindCodeCoutours(const Mat& I, Mat& J, configForCode config, RotatedRect& rotatedRect);
 	// —∞’“..µ„
 	Point Center_cal(std::vector<std::vector<Point> > contours, int i);
 private:
 	// —∞’“∂˛Œ¨¬Î«∞‘§¥¶¿Ì
-	void PretreatmentForFindCode(const Mat& I, Mat& J, int threshold, int erode_times, int blur_size);
+	void PretreatmentForFindCode(const Mat& I, Mat& J, configForCode config);
 public:
 	// —∞’“÷±œﬂ«∞‘§¥¶¿Ì
-	void PretreatmentForFindLine(const Mat& I, configForLine config, Vec4i& l);
+	bool PretreatmentForFindLine(const Mat& I, configForLine config, Vec4i& l);
 	// …®¬Î«∞‘§¥¶¿Ì
 	void PretreatmentForScanCode(const Mat& I, Mat& J, configForScan config);
+	// HarrisΩ«µ„ºÏ≤‚
+	void UseCornerHarris(const Mat& I, Mat& dst_norm, Mat& dst_norm_scaled, int blockSize, int apertureSize, double k);
+	// ªÊª≠Ω«µ„
+	void DrawCornerHarris(const Mat& I, Mat& J, int blockSize, int apertureSize, double k, int thresh);
+	// Shi-TomasiΩ«µ„ºÏ≤‚
+	void UseGoodFeaturesToTrack(const Mat& I, std::vector<Point2f>& corners, int maxCorners, double qualityLevel, double minDistance, int blockSize, bool useHarrisDetector, double k);
+	// ªÊª≠Shi-TomasiΩ«µ„ºÏ≤‚
+	void DrawCorners(const Mat& I, Mat& J, int maxCorners, double qualityLevel, double minDistance, int blockSize, bool useHarrisDetector, double k);
 };
 
