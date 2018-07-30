@@ -27,19 +27,19 @@ class CAboutDlg : public CDialogEx
 public:
 	CAboutDlg();
 
-// 对话框数据
+	// 对话框数据
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ABOUTBOX };
 #endif
 
-	protected:
+protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
 
 // 实现
 protected:
 	DECLARE_MESSAGE_MAP()
 public:
-//	afx_msg void OnContextMenu(CWnd* /*pWnd*/, CPoint /*point*/);
+	//	afx_msg void OnContextMenu(CWnd* /*pWnd*/, CPoint /*point*/);
 };
 
 CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX)
@@ -52,8 +52,8 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
-//	ON_WM_CREATE()
-//ON_WM_CONTEXTMENU()
+	//	ON_WM_CREATE()
+	//ON_WM_CONTEXTMENU()
 END_MESSAGE_MAP()
 
 
@@ -302,10 +302,10 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			break;
 		}
 	}
-		break;
+	break;
 	case 1:
 		J = Mat::zeros(image_r.size(), image_r.type());
-		reduceImage.UseFilter2D(image_r,J);
+		reduceImage.UseFilter2D(image_r, J);
 		break;
 	case 2:
 	{
@@ -324,7 +324,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			alpha = 0.5;
 		reduceImage.UseAddWeighted(image_r, K, alpha, J);
 	}
-		break;
+	break;
 	case 3:
 	{
 		J = Mat::zeros(image_r.size(), image_r.type());
@@ -336,23 +336,23 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		int beta = _ttoi(str1);
 		reduceImage.ChangeAlphaBeta(image_r, J, alpha, beta);
 	}
-		break;
+	break;
 	case 4:
 	{
 		if (image_r.channels() != 1)
 		{
-			INT_PTR res = MessageBox(_T("该图像不是灰度图像，是否先转换成灰度图像再执行"),_T("提示！"),MB_ACTIVE);
+			INT_PTR res = MessageBox(_T("该图像不是灰度图像，是否先转换成灰度图像再执行"), _T("提示！"), MB_ACTIVE);
 			if (res != IDOK) {
 				return;
 			}
 			Mat temp;
-			cvtColor(image_r,temp, CV_RGB2GRAY);
+			cvtColor(image_r, temp, CV_RGB2GRAY);
 			reduceImage.UseDTF(temp, J);
 			break;
 		}
 		reduceImage.UseDTF(image_r, J);
 	}
-		break;
+	break;
 	case 5:
 	{
 		CString str0;
@@ -363,7 +363,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			MessageBox(_T("Element Size 不可小于1或大于31！"));
 			break;
 		}
-		if (size % 2 == 0) 
+		if (size % 2 == 0)
 		{
 			MessageBox(_T("Element Size 只能是奇数！"));
 			break;
@@ -371,7 +371,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		int filter = method_one_selecter.GetCurSel();
 		reduceImage.UseBlur(image_r, J, filter, size);
 	}
-		break;
+	break;
 	case 6:
 	{
 		CString str0;
@@ -388,7 +388,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		else if (erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
 		reduceImage.UseErosion(image_r, J, erosion_type, size);
 	}
-		break;
+	break;
 	case 7:
 	{
 		CString str0;
@@ -405,7 +405,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		else if (dilation_elem == 2) { dilation_type = MORPH_ELLIPSE; }
 		reduceImage.UseDilation(image_r, J, dilation_type, size);
 	}
-		break;
+	break;
 	case 8:
 	{
 		CString str0;
@@ -418,7 +418,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		}
 		reduceImage.UsePyr(image_r, J, method_one_selecter.GetCurSel(), cycle);
 	}
-		break;
+	break;
 	case 9:
 	{
 		CString str0;
@@ -426,24 +426,24 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		int value = _ttoi(str0);
 		reduceImage.UseThreshold(image_r, J, value, method_one_selecter.GetCurSel());
 	}
-		break;
+	break;
 	case 10:
 	{
 		RNG rng(12345);
 		Scalar value = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 		reduceImage.UseCopyMakeBorder(image_r, J, value, method_one_selecter.GetCurSel());
 	}
-		break;
-	case 11: 
+	break;
+	case 11:
 		reduceImage.UseEdgeDetection(image_r, J, method_one_selecter.GetCurSel());
 		break;
 	case 12:
 	{
 		CString str0;
 		m_num_edit.GetWindowTextW(str0);
-		int threshold = _ttoi(str0); 
+		int threshold = _ttoi(str0);
 		double minLinLength, maxLineGap;
-		if (method_one_selecter.GetCurSel() == 1) 
+		if (method_one_selecter.GetCurSel() == 1)
 		{
 			CString str1;
 			m_double_one.GetWindowTextW(str1);
@@ -457,9 +457,9 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			minLinLength = 0.0;
 			maxLineGap = 0.0;
 		}
-		reduceImage.UseHoughLines(image_r, J, 1, CV_PI/900, threshold, method_one_selecter.GetCurSel(), minLinLength, maxLineGap);
+		reduceImage.UseHoughLines(image_r, J, 1, CV_PI / 900, threshold, method_one_selecter.GetCurSel(), minLinLength, maxLineGap);
 	}
-		break;
+	break;
 	case 13:
 		reduceImage.UseHoughCircles(image_r, J);
 		break;
@@ -478,7 +478,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		double angle = _ttof(str0);
 		reduceImage.RotateImage(image_r, J, angle);
 	}
-		break;
+	break;
 	case 17:
 		reduceImage.UseEqualizeHist(image_r, J);
 		break;
@@ -489,7 +489,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		int bins = _ttoi(str0);
 		reduceImage.UseCalcHistAndDraw(image_r, J, bins);
 	}
-		break;
+	break;
 	case 19:
 	{
 		//第二图像路径
@@ -505,7 +505,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		msg.Format(_T("对比结果：%lf"), result);
 		MessageBox(msg);
 	}
-		break;
+	break;
 	case 20:
 	{
 		//第二图像路径
@@ -521,7 +521,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		int bins = _ttoi(str0);
 		reduceImage.UseCalcBackProject(image_r, _J, J, 180, bins);
 	}
-		break;
+	break;
 	case 21:
 	{
 		//模板图像路径
@@ -534,7 +534,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		}
 		reduceImage.UseMatchTemplate(image_r, templ, J, method_one_selecter.GetCurSel());
 	}
-		break;
+	break;
 	case 22:
 	{
 		CString str0;
@@ -543,7 +543,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		J = Mat::zeros(image_r.size(), CV_8UC3);
 		reduceImage.FindAndDrawContours(image_r, J, thresh);
 	}
-		break;
+	break;
 	case 23:
 	{
 		CString str0;
@@ -552,7 +552,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		J = Mat::zeros(image_r.size(), CV_8UC3);
 		reduceImage.FindAndDrawConvexHull(image_r, J, thresh, m_check_is_draw_contours.GetCheck());
 	}
-		break;
+	break;
 	case 24:
 	{
 		CString str0;
@@ -561,7 +561,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		J = Mat::zeros(image_r.size(), CV_8UC3);
 		reduceImage.UseApproxPolyDP(image_r, J, thresh, m_check_is_draw_contours.GetCheck());
 	}
-		break;
+	break;
 	case 25:
 	{
 		CString str0;
@@ -570,16 +570,26 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		J = Mat::zeros(image_r.size(), CV_8UC3);
 		reduceImage.DrawRectOrCircle(image_r, J, thresh, method_one_selecter.GetCurSel());
 	}
-		break;
+	break;
 	case 26:
 	{
 		string type;
 		string data;
-		reduceImage.ScanBarCode(image_r, type, data);
-		MessageBoxA(this->GetSafeHwnd(), data.c_str(), type.c_str(),0);
+		switch (method_one_selecter.GetCurSel())
+		{
+		case 0:
+			reduceImage.ScanBarCode(image_r, type, data);
+			break;
+		case 1:
+			reduceImage.ScanBarCodeForZxing(image_r, 0, data);
+			break;
+		default:
+			break;
+		}
+		MessageBoxA(this->GetSafeHwnd(), data.c_str(), type.c_str(), 0);
 		J = image_r.clone();
 	}
-		break;
+	break;
 	case 27:
 	{
 		CString str0;
@@ -589,7 +599,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		RotatedRect rotatedRect;
 		reduceImage.FindCodeCoutours(image_r, J, codeConfig, rotatedRect);
 	}
-		break;
+	break;
 	case 28:
 	{
 		switch (method_one_selecter.GetCurSel())
@@ -600,9 +610,9 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		default:
 			break;
 		}
-		
+
 	}
-		break;
+	break;
 	case 29:
 	{
 		CString str0;
@@ -620,7 +630,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			break;
 		}
 	}
-		break;
+	break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -720,6 +730,7 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		HideMethodTwentySix();
 		break;
 	case 26:
+		HideMethodTwentySeven();
 		break;
 	case 27:
 		HideMethodTwentyEight();
@@ -734,8 +745,8 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		break;
 	}
 	switch (selectMethod.GetCurSel()) {
-	case 0 :
-		ShowMethodOne(); 
+	case 0:
+		ShowMethodOne();
 		m_last_spin_num = 0;
 		break;
 	case 1:
@@ -835,6 +846,7 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		m_last_spin_num = 25;
 		break;
 	case 26:
+		ShowMethodTwentySeven();
 		m_last_spin_num = 26;
 		break;
 	case 27:
@@ -890,7 +902,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedButton1()
 	//读入图像
 	//image_r = imread(imgFile, CV_LOAD_IMAGE_GRAYSCALE);
 	image_r = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
-	
+
 	if (!image_r.data)
 	{
 		MessageBox(_T("打开图片失败"));
@@ -1012,7 +1024,7 @@ void CMyOpenCVApplicationDlg::ShowMethodSix()
 	method_one_selecter.InsertString(0, _T("均值平滑"));
 	method_one_selecter.InsertString(1, _T("高斯平滑"));
 	method_one_selecter.InsertString(2, _T("中值平滑"));
-	method_one_selecter.InsertString(3, _T("双边平滑")); 
+	method_one_selecter.InsertString(3, _T("双边平滑"));
 	method_one_selecter.InsertString(4, _T("自定义线性滤波器"));
 	method_one_selecter.SetCurSel(0);
 }
@@ -1112,17 +1124,17 @@ void CMyOpenCVApplicationDlg::HideMethodEleven()
 void CMyOpenCVApplicationDlg::OnBnClickedButton2()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	if (!image_r.data) 
+	if (!image_r.data)
 	{
 		MessageBox(_T("没有载入图像！"));
 		return;
 	}
-	else if(image_r.channels() == 1)
+	else if (image_r.channels() == 1)
 	{
 		MessageBox(_T("该图像是灰度图像！"));
 		return;
 	}
-	cvtColor(image_r,image_r, CV_RGB2GRAY);
+	cvtColor(image_r, image_r, CV_RGB2GRAY);
 	imshow(readWindowName, image_r);
 }
 
@@ -1171,7 +1183,7 @@ void CMyOpenCVApplicationDlg::ShowMethodThirteen()
 void CMyOpenCVApplicationDlg::HideMethodThirteen()
 {
 	m_num_edit.ShowWindow(SW_HIDE);
-	m_spin_one.ShowWindow(SW_HIDE); 
+	m_spin_one.ShowWindow(SW_HIDE);
 	m_double_one.ShowWindow(SW_HIDE);
 	m_double_two.ShowWindow(SW_HIDE);
 	method_one_selecter.ShowWindow(SW_HIDE);
@@ -1207,7 +1219,7 @@ void on_mouse(int event, int x, int y, int flags, void *ustc)
 	}
 	if (event == CV_EVENT_MOUSEMOVE && (flags & CV_EVENT_FLAG_LBUTTON))
 	{
-		if (x != thisDlg->GetSPt().x && y != thisDlg->GetSPt().y) 
+		if (x != thisDlg->GetSPt().x && y != thisDlg->GetSPt().y)
 		{
 			thisDlg->SetEPt(x, y);
 			thisDlg->DrawRectangle();
@@ -1229,7 +1241,7 @@ Point CMyOpenCVApplicationDlg::GetSPt()
 }
 
 
-void CMyOpenCVApplicationDlg::SetSPt(int x,int y)
+void CMyOpenCVApplicationDlg::SetSPt(int x, int y)
 {
 	s_pt = Point(x, y);
 }
@@ -1293,7 +1305,7 @@ void CMyOpenCVApplicationDlg::OnCopyCoordinate()
 		str.Format(_T("(%d,%d),(%d,%d)"), min(s_pt.x, e_pt.x), min(s_pt.y, e_pt.y), max(s_pt.x, e_pt.x), max(s_pt.y, e_pt.y));
 		HANDLE hClip = GlobalAlloc(GMEM_MOVEABLE, str.GetLength() + 1);
 		USES_CONVERSION;
-		strcpy_s((char *)GlobalLock(hClip),str.GetLength()+1, T2A(str));
+		strcpy_s((char *)GlobalLock(hClip), str.GetLength() + 1, T2A(str));
 		GlobalUnlock(hClip);//解锁  
 		SetClipboardData(CF_TEXT, hClip);//设置格式  
 		CloseClipboard();
@@ -1445,7 +1457,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedMultipleBlend()
 	{
 		double alpha = 1.0 / (i + 1.0 - skip_num);
 		Mat next = imread((LPCSTR)(CStringA)vecFiles.at(i), CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
-		if (I.size() != next.size()) 
+		if (I.size() != next.size())
 		{
 			skip_num += 1.0;
 			continue;
@@ -1581,7 +1593,7 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeMethodOneSelecter()
 	// TODO: 在此添加控件通知处理程序代码
 	if (m_last_spin_num != 12)
 		return;
-	if (method_one_selecter.GetCurSel() == 1) 
+	if (method_one_selecter.GetCurSel() == 1)
 	{
 		m_double_one.ShowWindow(SW_SHOW);
 		m_double_two.ShowWindow(SW_SHOW);
@@ -1634,7 +1646,7 @@ Point CMyOpenCVApplicationDlg::PointToLineDist(Point p, Point p1, Point p2)
 {
 	Point result;
 	//向量内积，向量1为点1到点，向量2为点1到点2
-	double cross = (p2.x - p1.x) * (p.x - p1.x) + (p2.y - p1.y) * (p.y -p1.y);
+	double cross = (p2.x - p1.x) * (p.x - p1.x) + (p2.y - p1.y) * (p.y - p1.y);
 	//向量2的长度的平方
 	double d2 = (p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y);
 	//r为向量1在向量2上投影向量与向量2的比值，方向相反则为负数
@@ -1642,7 +1654,7 @@ Point CMyOpenCVApplicationDlg::PointToLineDist(Point p, Point p1, Point p2)
 	result.x = p1.x + (p2.x - p1.x) * r;
 	result.y = p1.y + (p2.y - p1.y) * r;
 	return result;
-		//sqrt((p.x - result.x) * (p.x - result.x) + (p.y - result.y) * (p.y - result.y));
+	//sqrt((p.x - result.x) * (p.x - result.x) + (p.y - result.y) * (p.y - result.y));
 }
 
 
@@ -1653,7 +1665,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedButtonConfig()
 }
 
 
-// 找线参数初始化
+// 参数初始化
 void CMyOpenCVApplicationDlg::initLineConfig()
 {
 	RLineConfig.canny_size = 3;
@@ -1705,75 +1717,75 @@ double CMyOpenCVApplicationDlg::GetLineLenght(Point p1, Point p2, double x_propo
 void CMyOpenCVApplicationDlg::CodeJudgement(Mat& J)
 {
 	J = image_r.clone();
-		if (J.channels() == 1)
-			cvtColor(J, J, CV_GRAY2BGR);
-		RotatedRect rotatedRect;
-		Mat code(image_r, Rect(1371, 403, 418, 379));
-		Mat temp = code.clone();
+	if (J.channels() == 1)
+		cvtColor(J, J, CV_GRAY2BGR);
+	RotatedRect rotatedRect;
+	Mat code(image_r, Rect(1371, 403, 418, 379));
+	Mat temp = code.clone();
 
-		string type = NULL;
-		string data;
-		
-		if (reduceImage.FindCodeCoutours(code, temp, codeConfig, rotatedRect)) 
-		{
-			Rect tempRect = rotatedRect.boundingRect();
-			Rect scanRect = Rect(tempRect.x + 1371, tempRect.y + 403, tempRect.width, tempRect.height);
-			Mat ScanRect = Mat(image_r, scanRect).clone();
-			reduceImage.PretreatmentForScanCode(ScanRect, ScanRect, ScanConfig);
+	string type = NULL;
+	string data;
 
-			reduceImage.ScanBarCode(ScanRect, type, data);
-		}
-		
-		if (type == NULL)
-		{
-			MessageBox(_T("error code"));
-			return;
-		}
-		Point2f fourPoint2f[4];
+	if (reduceImage.FindCodeCoutours(code, temp, codeConfig, rotatedRect))
+	{
+		Rect tempRect = rotatedRect.boundingRect();
+		Rect scanRect = Rect(tempRect.x + 1371, tempRect.y + 403, tempRect.width, tempRect.height);
+		Mat ScanRect = Mat(image_r, scanRect).clone();
+		reduceImage.PretreatmentForScanCode(ScanRect, ScanRect, ScanConfig);
 
-		/** returns 4 vertices of the rectangle
-		@param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
-		*/
-		//将rectPoint变量中存储的坐标值放到 fourPoint的数组中  
-		rotatedRect.points(fourPoint2f);
+		reduceImage.ScanBarCode(ScanRect, type, data);
+	}
 
-		Point Rmid1 = FindMidPoint(fourPoint2f[2], fourPoint2f[3], 1371, 403);
-		Mat Rline(image_r, Rect(2147, 467, 300, 328));
-		Vec4i Rl;
-		double Rlen;
-		double CRlen = GetLineLenght(fourPoint2f[2], fourPoint2f[3], 37.0, 37.0);
-		if (reduceImage.PretreatmentForFindLine(Rline, RLineConfig, Rl))
-		{
-			Point R1 = Point(Rl[0] + 2147, Rl[1] + 467);
-			Point R2 = Point(Rl[2] + 2147, Rl[3] + 467);
-			Point Rmid2 = PointToLineDist(Rmid1, R1, R2);
-			line(J, R1, R2, Scalar(0, 0, 255), 5);
-			line(J, Rmid1, Rmid2, Scalar(0, 0, 255), 5);
-			Rlen = GetLineLenght(Rmid1, Rmid2, 37.0, 37.0);
-		}
-		
+	if (type == NULL)
+	{
+		MessageBox(_T("error code"));
+		return;
+	}
+	Point2f fourPoint2f[4];
 
-		Point Dmid1 = FindMidPoint(fourPoint2f[0], fourPoint2f[3], 1371, 403);
-		Mat Dline(image_r, Rect(976, 1641, 303, 246));
-		Vec4i Dl;
-		double Dlen;
-		double CDlen = GetLineLenght(fourPoint2f[0], fourPoint2f[3], 37.0, 37.0);
-		if (reduceImage.PretreatmentForFindLine(Dline, DLineConfig, Dl))
-		{
-			Point D1 = Point(Dl[0] + 976, Dl[1] + 1641);
-			Point D2 = Point(Dl[2] + 976, Dl[3] + 1641);
-			Point Dmid2 = PointToLineDist(Dmid1, D1, D2);
-			line(J, D1, D2, Scalar(0, 0, 255), 5);
-			line(J, Dmid1, Dmid2, Scalar(0, 0, 255), 5);
-			Dlen = GetLineLenght(Dmid1, Dmid2, 37.0, 37.0);
-		}
-		
-		float angle = rotatedRect.angle;
-		CString info;
-		info.Format(_T("条码类型：%s\n条码：%s\n码高：%.3lf\n码宽：%.3lf\n右距离：%.3lf\n左距离：%.3lf\n角度：%f"),
-			CStringW(type.c_str()), CStringW(data.c_str()), CRlen, CDlen, Rlen, Dlen, angle);
-		imshow(showWindowName, J);
-		MessageBox(info);
+	/** returns 4 vertices of the rectangle
+	@param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
+	*/
+	//将rectPoint变量中存储的坐标值放到 fourPoint的数组中  
+	rotatedRect.points(fourPoint2f);
+
+	Point Rmid1 = FindMidPoint(fourPoint2f[2], fourPoint2f[3], 1371, 403);
+	Mat Rline(image_r, Rect(2147, 467, 300, 328));
+	Vec4i Rl;
+	double Rlen;
+	double CRlen = GetLineLenght(fourPoint2f[2], fourPoint2f[3], 37.0, 37.0);
+	if (reduceImage.PretreatmentForFindLine(Rline, RLineConfig, Rl))
+	{
+		Point R1 = Point(Rl[0] + 2147, Rl[1] + 467);
+		Point R2 = Point(Rl[2] + 2147, Rl[3] + 467);
+		Point Rmid2 = PointToLineDist(Rmid1, R1, R2);
+		line(J, R1, R2, Scalar(0, 0, 255), 5);
+		line(J, Rmid1, Rmid2, Scalar(0, 0, 255), 5);
+		Rlen = GetLineLenght(Rmid1, Rmid2, 37.0, 37.0);
+	}
+
+
+	Point Dmid1 = FindMidPoint(fourPoint2f[0], fourPoint2f[3], 1371, 403);
+	Mat Dline(image_r, Rect(976, 1641, 303, 246));
+	Vec4i Dl;
+	double Dlen;
+	double CDlen = GetLineLenght(fourPoint2f[0], fourPoint2f[3], 37.0, 37.0);
+	if (reduceImage.PretreatmentForFindLine(Dline, DLineConfig, Dl))
+	{
+		Point D1 = Point(Dl[0] + 976, Dl[1] + 1641);
+		Point D2 = Point(Dl[2] + 976, Dl[3] + 1641);
+		Point Dmid2 = PointToLineDist(Dmid1, D1, D2);
+		line(J, D1, D2, Scalar(0, 0, 255), 5);
+		line(J, Dmid1, Dmid2, Scalar(0, 0, 255), 5);
+		Dlen = GetLineLenght(Dmid1, Dmid2, 37.0, 37.0);
+	}
+
+	float angle = rotatedRect.angle;
+	CString info;
+	info.Format(_T("条码类型：%s\n条码：%s\n码高：%.3lf\n码宽：%.3lf\n右距离：%.3lf\n左距离：%.3lf\n角度：%f"),
+		CStringW(type.c_str()), CStringW(data.c_str()), CRlen, CDlen, Rlen, Dlen, angle);
+	imshow(showWindowName, J);
+	MessageBox(info);
 }
 
 
@@ -1794,6 +1806,24 @@ void CMyOpenCVApplicationDlg::HideMethodThirty()
 {
 	m_num_edit.ShowWindow(SW_HIDE);
 	m_spin_one.ShowWindow(SW_HIDE);
+	method_one_selecter.ShowWindow(SW_HIDE);
+	method_one_selecter.ResetContent();
+}
+
+
+// 暂时扫码选项
+void CMyOpenCVApplicationDlg::ShowMethodTwentySeven()
+{
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.InsertString(0, _T("ZBar"));
+	method_one_selecter.InsertString(1, _T("zxing"));
+	method_one_selecter.SetCurSel(0);
+}
+
+
+// 隐藏扫码选项
+void CMyOpenCVApplicationDlg::HideMethodTwentySeven()
+{
 	method_one_selecter.ShowWindow(SW_HIDE);
 	method_one_selecter.ResetContent();
 }

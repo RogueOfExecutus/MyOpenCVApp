@@ -136,6 +136,7 @@ public:
 	afx_msg void OnCbnSelchangeMethodOneSelecter();
 	CEdit m_double_one;
 	CEdit m_double_two;
+	afx_msg void OnBnClickedButtonConfig();
 private:
 	// 显示重映射选项
 	void ShowMethodFifteen();
@@ -193,13 +194,10 @@ private:
 	void HideMethodTwentyNine();
 	// 点到线的最短距离
 	static Point PointToLineDist(Point p, Point p1, Point p2);
-public:
-	afx_msg void OnBnClickedButtonConfig();
-private:
 	CButton m_config_bt;
 	configForLine RLineConfig;
 	configForLine DLineConfig;
-	// 找线参数初始化
+	// 参数初始化
 	void initLineConfig();
 	configForScan ScanConfig;
 	static Point FindMidPoint(Point p1, Point p2, int x_offset, int y_offset);
@@ -211,4 +209,13 @@ private:
 	void ShowMethodThirty();
 	// 隐藏角点检测方法
 	void HideMethodThirty();
+	configForRect topLine;
+	configForRect leftLine;
+	configForRect rightLine;
+	configForRect bottomLine;
+	configForRect codeRect;
+	// 暂时扫码选项
+	void ShowMethodTwentySeven();
+	// 隐藏扫码选项
+	void HideMethodTwentySeven();
 };

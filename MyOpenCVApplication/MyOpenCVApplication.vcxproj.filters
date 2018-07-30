@@ -39,6 +39,9 @@
     <ClInclude Include="MyReduceImage.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="MatSource.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MyOpenCVApplication.cpp">
@@ -56,6 +59,9 @@
     <ClCompile Include="MyReduceImage.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="MatSource.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MyOpenCVApplication.rc">
@@ -71,5 +77,8 @@
     <Image Include="res\MyOpenCVApplication.ico">
       <Filter>资源文件</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\..\..\ZXingWin64\zxing-cpp-master\build\Debug\libzxing-debug.lib" />
   </ItemGroup>
 </Project>

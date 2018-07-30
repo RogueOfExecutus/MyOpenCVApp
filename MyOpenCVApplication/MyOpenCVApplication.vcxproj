@@ -79,6 +79,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>D:\ZXingWin64\zxing-cpp-master\core\src;$(IncludePath)</IncludePath>
+    <SourcePath>$(SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -115,9 +117,12 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -187,6 +192,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Login.h" />
+    <ClInclude Include="MatSource.h" />
     <ClInclude Include="MyReduceImage.h" />
     <ClInclude Include="MyOpenCVApplication.h" />
     <ClInclude Include="MyOpenCVApplicationDlg.h" />
@@ -196,6 +202,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Login.cpp" />
+    <ClCompile Include="MatSource.cpp" />
     <ClCompile Include="MyReduceImage.cpp" />
     <ClCompile Include="MyOpenCVApplication.cpp" />
     <ClCompile Include="MyOpenCVApplicationDlg.cpp" />
@@ -214,6 +221,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\MyOpenCVApplication.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\..\..\ZXingWin64\zxing-cpp-master\build\Debug\libzxing-debug.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

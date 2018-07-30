@@ -1,14 +1,26 @@
 #include "stdafx.h"
 #include "MyReduceImage.h"
-#include <opencv2/opencv.hpp> 
 #include <iostream>
 #include <sstream>
 #include "zbar.h"
 #include "MyOpenCVApplicationDlg.h"
+#include "zxing/LuminanceSource.h"
+#include "zxing/Reader.h" 
+#include "zxing/common/GlobalHistogramBinarizer.h"  
+#include "zxing/DecodeHints.h"  
+#include "zxing/datamatrix/DataMatrixReader.h"  
+#include "zxing/qrcode/QRCodeReader.h"
+#include "MatSource.h"
+#include "zxing/result.h"
+#include "zxing/BinaryBitmap.h"
+#include "zxing/Binarizer.h"
+#include "zxing/Exception.h"
+#include <opencv2/opencv.hpp> 
 
 using namespace std;
 using namespace cv;
 using namespace zbar;  //添加zbar名称空间 
+using namespace zxing; 
 
 uchar table[256];
 
@@ -1209,5 +1221,45 @@ void MyReduceImage::DrawCorners(const Mat& I, Mat& J, int maxCorners, double qua
 	{
 		circle(J, corners[i], 4, Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
 			rng.uniform(0, 255)), -1, 8, 0);
+	}
+}
+
+
+// zxing解析二维码
+void MyReduceImage::ScanBarCodeForZxing(const Mat& I, int codeType, string& data)
+{
+	Mat temp;
+	if (I.channels() == 1)
+	{
+		I.copyTo(temp);
+	}
+	else
+	{
+		cvtColor(I, temp, CV_BGR2GRAY);
+	}
+	try
+	{
+		Ref<LuminanceSource> source = MatSource::create(temp);
+		Ref<Reader> reader;
+		switch (codeType)
+		{
+		case 0:
+			reader.reset(new datamatrix::DataMatrixReader);
+			break;
+		case 1:
+			reader.reset(new qrcode::QRCodeReader);
+			break;
+		default:
+			break;
+		}
+		Ref<Binarizer> binarizer(new GlobalHistogramBinarizer(source));
+		Ref<BinaryBitmap> bitmap(new BinaryBitmap(binarizer));
+		//开始解码
+		Ref<Result> result(reader->decode(bitmap, DecodeHints(DecodeHints::DATA_MATRIX_HINT)));
+		data = result->getText()->getText();
+	}
+	catch (zxing::Exception e)
+	{
+
 	}
 }

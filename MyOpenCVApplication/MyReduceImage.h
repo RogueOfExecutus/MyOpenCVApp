@@ -28,6 +28,13 @@ struct configForCode {
 	int BlurSize;
 };
 
+struct configForRect {
+	int topLeft;
+	int topRight;
+	int bottomLeft;
+	int bottomRight;
+};
+
 class MyReduceImage
 {
 private:
@@ -132,5 +139,7 @@ public:
 	void UseGoodFeaturesToTrack(const Mat& I, std::vector<Point2f>& corners, int maxCorners, double qualityLevel, double minDistance, int blockSize, bool useHarrisDetector, double k);
 	// »æ»­Shi-Tomasi½Çµã¼ì²â
 	void DrawCorners(const Mat& I, Mat& J, int maxCorners, double qualityLevel, double minDistance, int blockSize, bool useHarrisDetector, double k);
+	// zxing½âÎö¶þÎ¬Âë
+	void ScanBarCodeForZxing(const Mat& I, int codeType, std::string& data);
 };
 
