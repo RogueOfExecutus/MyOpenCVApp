@@ -925,23 +925,10 @@ void MyReduceImage::ScanBarCode(const Mat& I, string& type, string& data)
 // 寻找二维码轮廓
 bool MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, configForCode config, RotatedRect& rotatedRect)
 {
-	/*Mat temp;
-	if (I.channels() == 1)
-	{
-		I.copyTo(temp);
-	}
-	else
-	{
-		cvtColor(I, temp, CV_BGR2GRAY);
-	}
-	UseThreshold(temp, temp, threshold, THRESH_BINARY);
-	UseBlur(temp, temp, 1, 3);
-	UseEqualizeHist(temp, temp);*/
 	Mat temp;
 	PretreatmentForFindCode(I, temp, config);
 
 	Scalar color = Scalar(1, 1, 255);
-	//Mat threshold_output;
 	vector<vector<Point> > contours, contours2;
 	vector<Vec4i> hierarchy;
 	Mat drawing = Mat::zeros(I.size(), CV_8UC3);
@@ -952,9 +939,8 @@ bool MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, configForCode config,
 
 
 	RNG rng(12345);
-	int c = 0, ic = 0, k = 0, area = 0;
-	//
-	//程序的核心筛选
+	int c = 0, ic = 0, area = 0;
+
 	//程序的核心筛选
 	int parentIdx = -1;
 	for (int i = 0; i < contours.size(); i++)
@@ -981,14 +967,14 @@ bool MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, configForCode config,
 			drawContours(drawing, contours, parentIdx, Scalar(0, 255, 0), 1, 8);
 			ic = 0;
 			parentIdx = -1;
-			area = contourArea(contours[i]);//得出一个二维码定位角的面积，以便计算其边长（area_side）（数据覆盖无所谓，三个定位角中任意一个数据都可以）
+			//area = contourArea(contours[i]);//得出一个二维码定位角的面积，以便计算其边长（area_side）（数据覆盖无所谓，三个定位角中任意一个数据都可以）
 		}
 		imshow("提取前", drawing);
 	}
 	if (contours2.size() > 0)
 	{
 		for (int i = 0; i < contours2.size(); i++)
-			drawContours(drawing2, contours2, i, Scalar(0, 0, 255), 1, 4, hierarchy[k][2], 0, Point());
+			drawContours(drawing2, contours2, i, Scalar(0, 0, 255), 1, 4, vector<Vec4i>(), 0, Point());
 
 
 		vector<Point> point(contours2.size());
@@ -997,7 +983,7 @@ bool MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, configForCode config,
 			point[i] = Center_cal(contours2, i);
 		}
 
-		//area = contourArea(contours2[1]);//为什么这一句和前面一句计算的面积不一样呢
+		area = contourArea(contours2[1]);
 		int area_side = cvRound(sqrt(double(area)));
 		for (int i = 0; i < contours2.size(); i++)
 		{
@@ -1020,8 +1006,9 @@ bool MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, configForCode config,
 			, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//RETR_EXTERNAL表示只寻找最外层轮廓
 
 
-		//求最小包围矩形，斜的也可以哦
+		//求最小包围矩形
 		rotatedRect = minAreaRect(contours_all[0]);
+
 		Point2f fourPoint2f[4];
 
 		/** returns 4 vertices of the rectangle
@@ -1226,7 +1213,7 @@ void MyReduceImage::DrawCorners(const Mat& I, Mat& J, int maxCorners, double qua
 
 
 // zxing解析二维码
-void MyReduceImage::ScanBarCodeForZxing(const Mat& I, int codeType, string& data)
+bool MyReduceImage::ScanBarCodeForZxing(const Mat& I, int codeType, string& data, vector<Point>& codePoint)
 {
 	Mat temp;
 	if (I.channels() == 1)
@@ -1241,13 +1228,16 @@ void MyReduceImage::ScanBarCodeForZxing(const Mat& I, int codeType, string& data
 	{
 		Ref<LuminanceSource> source = MatSource::create(temp);
 		Ref<Reader> reader;
+		DecodeHints hints;
 		switch (codeType)
 		{
 		case 0:
-			reader.reset(new datamatrix::DataMatrixReader);
+			reader.reset(new qrcode::QRCodeReader);
+			hints = DecodeHints(DecodeHints::QR_CODE_HINT);
 			break;
 		case 1:
-			reader.reset(new qrcode::QRCodeReader);
+			reader.reset(new datamatrix::DataMatrixReader);
+			hints = DecodeHints(DecodeHints::DATA_MATRIX_HINT);
 			break;
 		default:
 			break;
@@ -1255,11 +1245,54 @@ void MyReduceImage::ScanBarCodeForZxing(const Mat& I, int codeType, string& data
 		Ref<Binarizer> binarizer(new GlobalHistogramBinarizer(source));
 		Ref<BinaryBitmap> bitmap(new BinaryBitmap(binarizer));
 		//开始解码
-		Ref<Result> result(reader->decode(bitmap, DecodeHints(DecodeHints::DATA_MATRIX_HINT)));
+		Ref<Result> result(reader->decode(bitmap, hints));
 		data = result->getText()->getText();
+
+		// Get result point count
+		int resultPointCount = result->getResultPoints()->size();
+		codePoint = vector<Point>(resultPointCount);
+		//Point* codePoint = new Point[resultPointCount];//动态分配
+
+		for (int j = 0; j < resultPointCount; j++) 
+			codePoint[j] = toCvPoint(result->getResultPoints()[j]);
+		return true;
+		//if (resultPointCount > 0)// Draw text
+			//putText(temp, result->getText()->getText(), toCvPoint(result->getResultPoints()[0]), FONT_HERSHEY_PLAIN, 1, Scalar(110, 220, 0));
+
 	}
 	catch (zxing::Exception e)
 	{
-
+		data = "error decode";
+		return false;
 	}
+}
+
+
+Point MyReduceImage::toCvPoint(Ref<ResultPoint> resultPoint)
+{
+	return Point(resultPoint->getX(), resultPoint->getY());
+}
+
+
+// 绘画二维码点位
+void MyReduceImage::DrawCodePoint(Mat& J, vector<Point> codePoint)
+{
+	int len = codePoint.size();
+	if (!len > 1)
+		return;
+	if (J.channels() == 1)
+		cvtColor(J, J, CV_GRAY2BGR);
+	for (int j = 0; j < len; j++)// Draw circle
+		circle(J, codePoint[j], 10, Scalar(110, 220, 0), 2);
+
+	// Draw boundary on image
+	if (len > 1)
+		for (int j = 0; j < len; j++)
+		{
+			int previousIndex = (j > 0) ? j - 1 : len - 1;
+			// Draw line
+			//line(temp, toCvPoint(previousResultPoint), toCvPoint(result->getResultPoints()[j]), Scalar(110, 220, 0), 2, 8);
+			line(J, codePoint[previousIndex], codePoint[j], Scalar(110, 220, 0), 2, 8);
+		}
+
 }

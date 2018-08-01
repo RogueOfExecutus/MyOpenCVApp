@@ -195,13 +195,13 @@ private:
 	// 点到线的最短距离
 	static Point PointToLineDist(Point p, Point p1, Point p2);
 	CButton m_config_bt;
-	configForLine RLineConfig;
-	configForLine DLineConfig;
+	configForLine RLLineConfig;
+	configForLine UDLineConfig;
 	// 参数初始化
 	void initLineConfig();
 	configForScan ScanConfig;
 	static Point FindMidPoint(Point p1, Point p2, int x_offset, int y_offset);
-	static double GetLineLenght(Point p1, Point p2, double x_proportion, double y_proportion);
+	static double GetLineLength(Point p1, Point p2, double x_proportion, double y_proportion);
 	// 二维码判定
 	void CodeJudgement(Mat& J);
 	configForCode codeConfig;
@@ -209,13 +209,14 @@ private:
 	void ShowMethodThirty();
 	// 隐藏角点检测方法
 	void HideMethodThirty();
-	configForRect topLine;
-	configForRect leftLine;
-	configForRect rightLine;
-	configForRect bottomLine;
-	configForRect codeRect;
 	// 暂时扫码选项
 	void ShowMethodTwentySeven();
 	// 隐藏扫码选项
 	void HideMethodTwentySeven();
+	CComboBox m_scan_code_type;
+	configForProject projectConfig;
+	// 处理二维码到边缘距离
+	void handleCodeLine(const Mat& I, Mat& J, Point cp1, Point cp2, configForLine lineConfig, double& Len, double& CLen);
+	// 两线角度
+	void angleLine2Line(Point2f p1, Point2f p2, Point2f p3, Point2f p4);
 };

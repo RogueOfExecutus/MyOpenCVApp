@@ -1,4 +1,5 @@
 #pragma once
+#include "zxing/result.h"
 #include <opencv2/opencv.hpp> 
 
 using namespace cv;
@@ -11,6 +12,8 @@ struct configForLine {
 	double minLinLength;
 	double maxLineGap;
 	bool line_direction;
+	Rect rect;
+	bool same;
 };
 
 struct configForScan {
@@ -28,11 +31,13 @@ struct configForCode {
 	int BlurSize;
 };
 
-struct configForRect {
-	int topLeft;
-	int topRight;
-	int bottomLeft;
-	int bottomRight;
+struct configForProject {
+	Rect rect;
+	int codeType;
+	double pixel_scale_x;
+	double pixel_scale_y;
+	bool isDebug;
+	int corner;
 };
 
 class MyReduceImage
@@ -54,6 +59,9 @@ private:
 	void UseMinAreaRect(const Mat& I, Mat& J, int thresh);
 	// 最小包覆圆形
 	void UseMinEnclosingCircle(const Mat& I, Mat& J, int thresh);
+	Point toCvPoint(zxing::Ref<zxing::ResultPoint> resultPoint);
+	// 寻找二维码前预处理
+	void PretreatmentForFindCode(const Mat& I, Mat& J, configForCode config);
 public:
 	MyReduceImage();
 	MyReduceImage(int inputDivideWith);
@@ -123,10 +131,6 @@ public:
 	bool FindCodeCoutours(const Mat& I, Mat& J, configForCode config, RotatedRect& rotatedRect);
 	// 寻找..点
 	Point Center_cal(std::vector<std::vector<Point> > contours, int i);
-private:
-	// 寻找二维码前预处理
-	void PretreatmentForFindCode(const Mat& I, Mat& J, configForCode config);
-public:
 	// 寻找直线前预处理
 	bool PretreatmentForFindLine(const Mat& I, configForLine config, Vec4i& l);
 	// 扫码前预处理
@@ -140,6 +144,8 @@ public:
 	// 绘画Shi-Tomasi角点检测
 	void DrawCorners(const Mat& I, Mat& J, int maxCorners, double qualityLevel, double minDistance, int blockSize, bool useHarrisDetector, double k);
 	// zxing解析二维码
-	void ScanBarCodeForZxing(const Mat& I, int codeType, std::string& data);
+	bool ScanBarCodeForZxing(const Mat& I, int codeType, std::string& data, std::vector<Point>& codePoint);
+	// 绘画二维码点位
+	void DrawCodePoint(Mat& J, std::vector<Point> codePoint);
 };
 

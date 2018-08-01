@@ -97,6 +97,7 @@ void CMyOpenCVApplicationDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT_MIN_LIN_LEN, m_double_one);
 	DDX_Control(pDX, IDC_EDIT_MAX_LINE_GAP, m_double_two);
 	DDX_Control(pDX, IDC_BUTTON_CONFIG, m_config_bt);
+	DDX_Control(pDX, IDC_COMBO_CODE_TYPE, m_scan_code_type);
 }
 
 BEGIN_MESSAGE_MAP(CMyOpenCVApplicationDlg, CDialogEx)
@@ -573,6 +574,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 	break;
 	case 26:
 	{
+		J = image_r.clone();
 		string type;
 		string data;
 		switch (method_one_selecter.GetCurSel())
@@ -581,13 +583,16 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			reduceImage.ScanBarCode(image_r, type, data);
 			break;
 		case 1:
-			reduceImage.ScanBarCodeForZxing(image_r, 0, data);
+		{
+			vector<Point> codePoint;
+			reduceImage.ScanBarCodeForZxing(image_r, m_scan_code_type.GetCurSel(), data, codePoint);
+			reduceImage.DrawCodePoint(J, codePoint);
+		}
 			break;
 		default:
 			break;
 		}
 		MessageBoxA(this->GetSafeHwnd(), data.c_str(), type.c_str(), 0);
-		J = image_r.clone();
 	}
 	break;
 	case 27:
@@ -1591,17 +1596,36 @@ void CMyOpenCVApplicationDlg::HideMethodTwentySix()
 void CMyOpenCVApplicationDlg::OnCbnSelchangeMethodOneSelecter()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	if (m_last_spin_num != 12)
-		return;
-	if (method_one_selecter.GetCurSel() == 1)
+	switch (m_last_spin_num)
 	{
-		m_double_one.ShowWindow(SW_SHOW);
-		m_double_two.ShowWindow(SW_SHOW);
-	}
-	else
-	{
-		m_double_one.ShowWindow(SW_HIDE);
-		m_double_two.ShowWindow(SW_HIDE);
+	case 12:
+		if (method_one_selecter.GetCurSel() == 1)
+		{
+			m_double_one.ShowWindow(SW_SHOW);
+			m_double_two.ShowWindow(SW_SHOW);
+		}
+		else
+		{
+			m_double_one.ShowWindow(SW_HIDE);
+			m_double_two.ShowWindow(SW_HIDE);
+		}
+		break;
+	case 26:
+		if (method_one_selecter.GetCurSel() == 1)
+		{
+			m_scan_code_type.ShowWindow(SW_SHOW);
+			m_scan_code_type.InsertString(0, _T("QR Code"));
+			m_scan_code_type.InsertString(1, _T("Data Matrix"));
+			m_scan_code_type.SetCurSel(0);
+		}
+		else
+		{
+			m_scan_code_type.ShowWindow(SW_HIDE);
+			m_scan_code_type.ResetContent();
+		}
+		break;
+	default:
+		break;
 	}
 }
 
@@ -1645,10 +1669,12 @@ void CMyOpenCVApplicationDlg::HideMethodTwentyNine()
 Point CMyOpenCVApplicationDlg::PointToLineDist(Point p, Point p1, Point p2)
 {
 	Point result;
-	//向量内积，向量1为点1到点，向量2为点1到点2
+	//向量内积，向量1为点1到点p，向量2为点1到点2
 	double cross = (p2.x - p1.x) * (p.x - p1.x) + (p2.y - p1.y) * (p.y - p1.y);
 	//向量2的长度的平方
 	double d2 = (p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y);
+	//double d2 = norm((p2.x - p1.x), (p2.y - p1.y));
+	
 	//r为向量1在向量2上投影向量与向量2的比值，方向相反则为负数
 	double r = cross / d2;
 	result.x = p1.x + (p2.x - p1.x) * r;
@@ -1668,25 +1694,29 @@ void CMyOpenCVApplicationDlg::OnBnClickedButtonConfig()
 // 参数初始化
 void CMyOpenCVApplicationDlg::initLineConfig()
 {
-	RLineConfig.canny_size = 3;
-	RLineConfig.line_direction = true;
-	RLineConfig.maxLineGap = 20;
-	RLineConfig.minLinLength = 200;
-	RLineConfig.threshold = 40;
-	RLineConfig.threshold1 = 80;
-	RLineConfig.threshold2 = 200;
+	RLLineConfig.canny_size = 3;
+	RLLineConfig.line_direction = true;
+	RLLineConfig.maxLineGap = 20;
+	RLLineConfig.minLinLength = 200;
+	RLLineConfig.threshold = 40;
+	RLLineConfig.threshold1 = 80;
+	RLLineConfig.threshold2 = 200;
+	RLLineConfig.rect = Rect(2147, 467, 300, 328);
+	RLLineConfig.same = true;
 
-	DLineConfig.canny_size = 3;
-	DLineConfig.line_direction = false;
-	DLineConfig.maxLineGap = 20;
-	DLineConfig.minLinLength = 50;
-	DLineConfig.threshold = 35;
-	DLineConfig.threshold1 = 80;
-	DLineConfig.threshold2 = 200;
+	UDLineConfig.canny_size = 3;
+	UDLineConfig.line_direction = false;
+	UDLineConfig.maxLineGap = 20;
+	UDLineConfig.minLinLength = 50;
+	UDLineConfig.threshold = 35;
+	UDLineConfig.threshold1 = 80;
+	UDLineConfig.threshold2 = 200;
+	UDLineConfig.rect = Rect(976, 1641, 303, 246);
+	UDLineConfig.same = true;
 
 	ScanConfig.ErosionMethod = 0;
 	ScanConfig.ErosionSize = 1;
-	ScanConfig.ErosionTimes = 0;
+	ScanConfig.ErosionTimes = 2;
 	ScanConfig.threshold = 100;
 
 	codeConfig.BlurSize = 3;
@@ -1694,6 +1724,13 @@ void CMyOpenCVApplicationDlg::initLineConfig()
 	codeConfig.ErosionSize = 1;
 	codeConfig.ErosionTimes = 1;
 	codeConfig.threshold = 100;
+
+	projectConfig.codeType = 1;
+	//projectConfig.rect = Rect(0, 0, 200, 200);
+	projectConfig.rect = Rect(1371, 403, 418, 379);
+	projectConfig.pixel_scale_x = 37.0;
+	projectConfig.pixel_scale_y = 37.0;
+	projectConfig.corner = 3;
 }
 
 
@@ -1703,12 +1740,12 @@ Point CMyOpenCVApplicationDlg::FindMidPoint(Point p1, Point p2, int x_offset, in
 }
 
 
-double CMyOpenCVApplicationDlg::GetLineLenght(Point p1, Point p2, double x_proportion, double y_proportion)
+double CMyOpenCVApplicationDlg::GetLineLength(Point p1, Point p2, double pixel_scale_x, double pixel_scale_y)
 {
-	double x1 = p1.x / x_proportion;
-	double x2 = p2.x / x_proportion;
-	double y1 = p1.y / y_proportion;
-	double y2 = p2.y / y_proportion;
+	double x1 = p1.x / pixel_scale_x;
+	double x2 = p2.x / pixel_scale_x;
+	double y1 = p1.y / pixel_scale_y;
+	double y2 = p2.y / pixel_scale_y;
 	return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
 
@@ -1716,75 +1753,108 @@ double CMyOpenCVApplicationDlg::GetLineLenght(Point p1, Point p2, double x_propo
 // 二维码判定
 void CMyOpenCVApplicationDlg::CodeJudgement(Mat& J)
 {
+	double t = (double)getTickCount();
+	// 做点什么 ...
 	J = image_r.clone();
 	if (J.channels() == 1)
 		cvtColor(J, J, CV_GRAY2BGR);
 	RotatedRect rotatedRect;
-	Mat code(image_r, Rect(1371, 403, 418, 379));
+	Mat code(image_r, projectConfig.rect);
 	Mat temp = code.clone();
 
-	string type = NULL;
+	string type;
 	string data;
 
-	if (reduceImage.FindCodeCoutours(code, temp, codeConfig, rotatedRect))
-	{
-		Rect tempRect = rotatedRect.boundingRect();
-		Rect scanRect = Rect(tempRect.x + 1371, tempRect.y + 403, tempRect.width, tempRect.height);
-		Mat ScanRect = Mat(image_r, scanRect).clone();
-		reduceImage.PretreatmentForScanCode(ScanRect, ScanRect, ScanConfig);
-
-		reduceImage.ScanBarCode(ScanRect, type, data);
-	}
-
-	if (type == NULL)
-	{
-		MessageBox(_T("error code"));
-		return;
-	}
 	Point2f fourPoint2f[4];
+	float angle;
 
-	/** returns 4 vertices of the rectangle
-	@param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
-	*/
-	//将rectPoint变量中存储的坐标值放到 fourPoint的数组中  
-	rotatedRect.points(fourPoint2f);
+	switch (projectConfig.codeType)
+	{
+	case 0:
+	{
+		if (reduceImage.FindCodeCoutours(code, temp, codeConfig, rotatedRect))
+		{
+			Rect tempRect = rotatedRect.boundingRect();
+			Rect scanRect = Rect(tempRect.x + projectConfig.rect.x, tempRect.y + projectConfig.rect.y, tempRect.width, tempRect.height);
+			Mat ScanRect = Mat(image_r, scanRect).clone();
+			reduceImage.PretreatmentForScanCode(ScanRect, ScanRect, ScanConfig);
 
-	Point Rmid1 = FindMidPoint(fourPoint2f[2], fourPoint2f[3], 1371, 403);
-	Mat Rline(image_r, Rect(2147, 467, 300, 328));
-	Vec4i Rl;
+			reduceImage.ScanBarCode(ScanRect, type, data);
+		}
+
+		if (type.empty())
+		{
+			MessageBox(_T("error code"));
+			return;
+		}
+
+		/** returns 4 vertices of the rectangle
+		@param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
+		*/
+		//将rectPoint变量中存储的坐标值放到 fourPoint的数组中  
+		rotatedRect.points(fourPoint2f);
+
+		angle = rotatedRect.angle;
+
+		if (angle < 0)
+		{
+			Point2f temp = fourPoint2f[0];
+			for (int i = 0; i < 3; i++)
+			{
+				fourPoint2f[i] = fourPoint2f[i + 1];
+			}
+			fourPoint2f[3] = temp;
+		}
+		angle += 90.0f;
+	}
+		break;
+	case 1:
+	{
+		reduceImage.PretreatmentForScanCode(code, temp, ScanConfig);
+		vector<Point> codePoint;
+		if (reduceImage.ScanBarCodeForZxing(temp, 1, data, codePoint))
+		{
+			//4点顺序改成与RotatedRect一致
+			Point p = codePoint[0];
+			codePoint[0] = codePoint[1];
+			codePoint[1] = p;
+			//角点方向不同，顺序不同，需要调整
+			for (int i = 0; i < 4; i++)
+				fourPoint2f[i] = codePoint[(i + projectConfig.corner) % 4];
+		}
+		else
+		{
+			MessageBox(_T("error code"));
+			return;
+		}
+		type = "data matrix";
+		angle = 90.0f;
+		//reduceImage.DrawCodePoint(J, codePoint);
+	}
+		break;
+	default:
+		break;
+	}
+
 	double Rlen;
-	double CRlen = GetLineLenght(fourPoint2f[2], fourPoint2f[3], 37.0, 37.0);
-	if (reduceImage.PretreatmentForFindLine(Rline, RLineConfig, Rl))
-	{
-		Point R1 = Point(Rl[0] + 2147, Rl[1] + 467);
-		Point R2 = Point(Rl[2] + 2147, Rl[3] + 467);
-		Point Rmid2 = PointToLineDist(Rmid1, R1, R2);
-		line(J, R1, R2, Scalar(0, 0, 255), 5);
-		line(J, Rmid1, Rmid2, Scalar(0, 0, 255), 5);
-		Rlen = GetLineLenght(Rmid1, Rmid2, 37.0, 37.0);
-	}
+	double CRlen;
+	if (RLLineConfig.same) 
+		handleCodeLine(image_r, J, fourPoint2f[2], fourPoint2f[3], RLLineConfig, Rlen, CRlen);
+	else
+		handleCodeLine(image_r, J, fourPoint2f[0], fourPoint2f[1], RLLineConfig, Rlen, CRlen);
 
-
-	Point Dmid1 = FindMidPoint(fourPoint2f[0], fourPoint2f[3], 1371, 403);
-	Mat Dline(image_r, Rect(976, 1641, 303, 246));
-	Vec4i Dl;
 	double Dlen;
-	double CDlen = GetLineLenght(fourPoint2f[0], fourPoint2f[3], 37.0, 37.0);
-	if (reduceImage.PretreatmentForFindLine(Dline, DLineConfig, Dl))
-	{
-		Point D1 = Point(Dl[0] + 976, Dl[1] + 1641);
-		Point D2 = Point(Dl[2] + 976, Dl[3] + 1641);
-		Point Dmid2 = PointToLineDist(Dmid1, D1, D2);
-		line(J, D1, D2, Scalar(0, 0, 255), 5);
-		line(J, Dmid1, Dmid2, Scalar(0, 0, 255), 5);
-		Dlen = GetLineLenght(Dmid1, Dmid2, 37.0, 37.0);
-	}
+	double CDlen;
+	if(UDLineConfig.same)
+		handleCodeLine(image_r, J, fourPoint2f[0], fourPoint2f[3], UDLineConfig, Dlen, CDlen);
+	else
+		handleCodeLine(image_r, J, fourPoint2f[1], fourPoint2f[2], UDLineConfig, Dlen, CDlen);
 
-	float angle = rotatedRect.angle;
+	t = ((double)getTickCount() - t) / getTickFrequency();
 	CString info;
-	info.Format(_T("条码类型：%s\n条码：%s\n码高：%.3lf\n码宽：%.3lf\n右距离：%.3lf\n左距离：%.3lf\n角度：%f"),
-		CStringW(type.c_str()), CStringW(data.c_str()), CRlen, CDlen, Rlen, Dlen, angle);
-	imshow(showWindowName, J);
+	info.Format(_T("条码类型：%s\n条码：%s\n码高：%.3lf\n码宽：%.3lf\n右距离：%.3lf\n左距离：%.3lf\n角度：%f\n耗时：%lf秒"),
+		CStringW(type.c_str()), CStringW(data.c_str()), CRlen, CDlen, Rlen, Dlen, angle, t);
+	//imshow(showWindowName, J);
 	MessageBox(info);
 }
 
@@ -1826,4 +1896,33 @@ void CMyOpenCVApplicationDlg::HideMethodTwentySeven()
 {
 	method_one_selecter.ShowWindow(SW_HIDE);
 	method_one_selecter.ResetContent();
+	m_scan_code_type.ShowWindow(SW_HIDE);
+	m_scan_code_type.ResetContent();
+}
+
+// 处理二维码到边缘距离
+void CMyOpenCVApplicationDlg::handleCodeLine(const Mat& I, Mat& J, Point cp1, Point cp2, configForLine lineConfig, double& Len, double& CLen)
+{
+	Point mid1 = FindMidPoint(cp1, cp2, projectConfig.rect.x, projectConfig.rect.y);
+	Mat lineRect(image_r, lineConfig.rect);
+	Vec4i l;
+	CLen = GetLineLength(cp1, cp2, projectConfig.pixel_scale_x, projectConfig.pixel_scale_y);
+	Point cp1_os = Point(cp1.x + projectConfig.rect.x, cp1.y + projectConfig.rect.y);
+	Point cp2_os = Point(cp2.x + projectConfig.rect.x, cp2.y + projectConfig.rect.y);
+	line(J, cp1_os, cp2_os, Scalar(0, 0, 255), 5);
+	if (reduceImage.PretreatmentForFindLine(lineRect, lineConfig, l))
+	{
+		Point R1 = Point(l[0] + lineConfig.rect.x, l[1] + lineConfig.rect.y);
+		Point R2 = Point(l[2] + lineConfig.rect.x, l[3] + lineConfig.rect.y);
+		Point mid2 = PointToLineDist(mid1, R1, R2);
+		line(J, R1, R2, Scalar(0, 0, 255), 5);
+		//line(J, mid1, mid2, Scalar(0, 0, 255), 5);
+		Len = GetLineLength(mid1, mid2, projectConfig.pixel_scale_x, projectConfig.pixel_scale_y);
+	}
+}
+
+
+// 两线角度
+void CMyOpenCVApplicationDlg::angleLine2Line(Point2f p1, Point2f p2, Point2f p3, Point2f p4)
+{
 }
