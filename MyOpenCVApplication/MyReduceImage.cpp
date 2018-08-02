@@ -195,21 +195,21 @@ void MyReduceImage::UseBlur(const Mat& I, Mat& J, int filter, int size)
 
 
 // 腐蚀处理
-void MyReduceImage::UseErosion(const Mat& I, Mat& J, int erosion_type, int erosion_size)
+void MyReduceImage::UseErosion(const Mat& I, Mat& J, int kernel_type, int kernel_size)
 {
-	Mat element = getStructuringElement(erosion_type,
-		Size(2 * erosion_size + 1, 2 * erosion_size + 1),
-		Point(erosion_size, erosion_size));
+	Mat element = getStructuringElement(kernel_type,
+		Size(2 * kernel_size + 1, 2 * kernel_size + 1),
+		Point(kernel_size, kernel_size));
 	// 腐蚀操作
 	erode(I, J, element);
 }
 
 // 膨胀处理
-void MyReduceImage::UseDilation(const Mat & I, Mat & J, int dilation_type, int dilation_size)
+void MyReduceImage::UseDilation(const Mat & I, Mat & J, int kernel_type, int kernel_size)
 {
-	Mat element = getStructuringElement(dilation_type,
-		Size(2 * dilation_size + 1, 2 * dilation_size + 1),
-		Point(dilation_size, dilation_size));
+	Mat element = getStructuringElement(kernel_type,
+		Size(2 * kernel_size + 1, 2 * kernel_size + 1),
+		Point(kernel_size, kernel_size));
 	///膨胀操作
 	dilate(I, J, element);
 }
@@ -1112,16 +1112,8 @@ void MyReduceImage::PretreatmentForScanCode(const Mat& I, Mat& J, configForScan 
 	}
 	UseThreshold(J, J, config.threshold, 0);
 	if (config.ErosionTimes)
-	{
 		for (int i = 0; i < config.ErosionTimes; i++)
-		{
-			UseDilation(J, J, config.ErosionMethod, config.ErosionSize);
-		}
-		for (int i = 0; i < config.ErosionTimes; i++)
-		{
-			UseErosion(J, J, config.ErosionMethod, config.ErosionSize);
-		}
-	}
+			UseMorphologyEx(I, J, 0, 0, config.ErosionSize);
 }
 
 
@@ -1294,5 +1286,17 @@ void MyReduceImage::DrawCodePoint(Mat& J, vector<Point> codePoint)
 			//line(temp, toCvPoint(previousResultPoint), toCvPoint(result->getResultPoints()[j]), Scalar(110, 220, 0), 2, 8);
 			line(J, codePoint[previousIndex], codePoint[j], Scalar(110, 220, 0), 2, 8);
 		}
+}
 
+
+// 形态学变换操作
+void MyReduceImage::UseMorphologyEx(const Mat& I, Mat& J, int method, int kernel_type, int kernel_size)
+{
+	// 由于 MORPH_X的取值范围是: 2,3,4,5 和 6
+	int operation = method + 2;
+
+	Mat element = getStructuringElement(kernel_type, Size(2 * kernel_size + 1, 2 * kernel_size + 1), Point(kernel_size, kernel_size));
+
+	/// 运行指定形态学操作
+	morphologyEx(I, J, operation, element);
 }

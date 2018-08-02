@@ -219,4 +219,8 @@ private:
 	void handleCodeLine(const Mat& I, Mat& J, Point cp1, Point cp2, configForLine lineConfig, double& Len, double& CLen);
 	// 两线角度
 	void angleLine2Line(Point2f p1, Point2f p2, Point2f p3, Point2f p4);
+	// 展示形态学变换方法
+	void ShowMethodThirtyOne();
+	// 隐藏形态学变换方法
+	void HideMethodThirtyOne();
 };

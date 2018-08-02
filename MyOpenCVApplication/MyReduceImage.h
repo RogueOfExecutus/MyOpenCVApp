@@ -82,9 +82,9 @@ public:
 	// 平滑处理
 	void UseBlur(const Mat& I, Mat& J, int filter, int size);
 	// 腐蚀处理
-	void UseErosion(const Mat& I, Mat& J, int erosion_type, int erosion_size);
+	void UseErosion(const Mat& I, Mat& J, int kernel_type, int kernel_size);
 	// 膨胀处理
-	void UseDilation(const Mat& I, Mat& J, int dilation_type, int dilation_size);
+	void UseDilation(const Mat& I, Mat& J, int kernel_type, int kernel_size);
 	// 图像金字塔
 	void UsePyr(const Mat& I, Mat& J, int up_or_down, int cycle);
 	// 添加边界
@@ -147,5 +147,7 @@ public:
 	bool ScanBarCodeForZxing(const Mat& I, int codeType, std::string& data, std::vector<Point>& codePoint);
 	// 绘画二维码点位
 	void DrawCodePoint(Mat& J, std::vector<Point> codePoint);
+	// 形态学变换操作
+	void UseMorphologyEx(const Mat& I, Mat& J, int method, int kernel_type, int kernel_size);
 };
 

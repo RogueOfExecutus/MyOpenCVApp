@@ -186,7 +186,8 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(27, _T("筛选二维码轮廓"));
 	selectMethod.InsertString(28, _T("组合算法"));
 	selectMethod.InsertString(29, _T("角点检测"));
-	selectMethod.InsertString(30, _T("不处理"));
+	selectMethod.InsertString(30, _T("形态学变换"));
+	selectMethod.InsertString(31, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -636,6 +637,19 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		}
 	}
 	break;
+	case 30:
+	{
+		CString str0;
+		m_num_edit.GetWindowTextW(str0);
+		int size = _ttoi(str0);
+		if (size > 21 || size < 1)
+		{
+			MessageBox(_T("Kernel Size 不可小于1或大于21！"));
+			break;
+		}
+		reduceImage.UseMorphologyEx(image_r, J, method_one_selecter.GetCurSel(), 0, size);
+	}
+		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -745,6 +759,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		break;
 	case 29:
 		HideMethodThirty();
+		break;
+	case 30:
+		HideMethodThirtyOne();
 		break;
 	default:
 		break;
@@ -865,6 +882,10 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 29:
 		ShowMethodThirty();
 		m_last_spin_num = 29;
+		break;
+	case 30:
+		ShowMethodThirtyOne();
+		m_last_spin_num = 30;
 		break;
 	default:
 		break;
@@ -1753,8 +1774,9 @@ double CMyOpenCVApplicationDlg::GetLineLength(Point p1, Point p2, double pixel_s
 // 二维码判定
 void CMyOpenCVApplicationDlg::CodeJudgement(Mat& J)
 {
+	//计时
 	double t = (double)getTickCount();
-	// 做点什么 ...
+
 	J = image_r.clone();
 	if (J.channels() == 1)
 		cvtColor(J, J, CV_GRAY2BGR);
@@ -1925,4 +1947,31 @@ void CMyOpenCVApplicationDlg::handleCodeLine(const Mat& I, Mat& J, Point cp1, Po
 // 两线角度
 void CMyOpenCVApplicationDlg::angleLine2Line(Point2f p1, Point2f p2, Point2f p3, Point2f p4)
 {
+}
+
+
+// 展示形态学变换方法
+void CMyOpenCVApplicationDlg::ShowMethodThirtyOne()
+{
+	m_static_seven_eight.ShowWindow(SW_SHOW);
+	m_num_edit.ShowWindow(SW_SHOW);
+	m_spin_one.ShowWindow(SW_SHOW);
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.InsertString(0, _T("Opening"));
+	method_one_selecter.InsertString(1, _T("Closing"));
+	method_one_selecter.InsertString(2, _T("Gradient"));
+	method_one_selecter.InsertString(3, _T("Top Hat"));
+	method_one_selecter.InsertString(4, _T("Black Hat"));
+	method_one_selecter.SetCurSel(0);
+}
+
+
+// 隐藏形态学变换方法
+void CMyOpenCVApplicationDlg::HideMethodThirtyOne()
+{
+	m_static_seven_eight.ShowWindow(SW_HIDE);
+	m_num_edit.ShowWindow(SW_HIDE);
+	m_spin_one.ShowWindow(SW_HIDE);
+	method_one_selecter.ShowWindow(SW_HIDE);
+	method_one_selecter.ResetContent();
 }
