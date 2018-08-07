@@ -16,11 +16,17 @@
 #include "zxing/Binarizer.h"
 #include "zxing/Exception.h"
 #include <opencv2/opencv.hpp> 
+#include "pylon/PylonIncludes.h"
+
+#ifdef _DEBUG //重载new
+#define new  new(_NORMAL_BLOCK, __FILE__, __LINE__)  
+#endif
 
 using namespace std;
 using namespace cv;
 using namespace zbar;  //添加zbar名称空间 
 using namespace zxing; 
+using namespace Pylon;
 
 uchar table[256];
 
@@ -1299,4 +1305,10 @@ void MyReduceImage::UseMorphologyEx(const Mat& I, Mat& J, int method, int kernel
 
 	/// 运行指定形态学操作
 	morphologyEx(I, J, operation, element);
+}
+
+
+// basler相机
+void MyReduceImage::PylonFiveDemo(Mat& J)
+{
 }

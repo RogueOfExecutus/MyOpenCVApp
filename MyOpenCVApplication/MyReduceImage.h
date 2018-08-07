@@ -149,5 +149,7 @@ public:
 	void DrawCodePoint(Mat& J, std::vector<Point> codePoint);
 	// 形态学变换操作
 	void UseMorphologyEx(const Mat& I, Mat& J, int method, int kernel_type, int kernel_size);
+	// basler相机
+	void PylonFiveDemo(Mat& J);
 };
 

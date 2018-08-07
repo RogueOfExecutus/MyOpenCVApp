@@ -1,4 +1,3 @@
-
 // MyOpenCVApplicationDlg.cpp : 实现文件
 //
 
@@ -9,13 +8,21 @@
 #include <opencv2/opencv.hpp> 
 #include "MyReduceImage.h"
 #include <sstream>
+#include "pylon/PylonIncludes.h"
+#include <condition_variable>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <cstdlib>
 
 #ifdef _DEBUG
-#define new DEBUG_NEW
+#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
 #endif
 
 using namespace cv;
 using namespace std;
+using namespace Pylon;
+using namespace GenApi;
 
 void on_mouse(int mouse_event, int x, int y, int flags, void *ustc);
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
@@ -98,6 +105,7 @@ void CMyOpenCVApplicationDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT_MAX_LINE_GAP, m_double_two);
 	DDX_Control(pDX, IDC_BUTTON_CONFIG, m_config_bt);
 	DDX_Control(pDX, IDC_COMBO_CODE_TYPE, m_scan_code_type);
+	DDX_Control(pDX, IDC_BUTTON_OPEN_CAMERA, m_camera_bt);
 }
 
 BEGIN_MESSAGE_MAP(CMyOpenCVApplicationDlg, CDialogEx)
@@ -119,6 +127,8 @@ BEGIN_MESSAGE_MAP(CMyOpenCVApplicationDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_MULTIPLE_BLEND, &CMyOpenCVApplicationDlg::OnBnClickedMultipleBlend)
 	ON_CBN_SELCHANGE(IDC_METHOD_ONE_SELECTER, &CMyOpenCVApplicationDlg::OnCbnSelchangeMethodOneSelecter)
 	ON_BN_CLICKED(IDC_BUTTON_CONFIG, &CMyOpenCVApplicationDlg::OnBnClickedButtonConfig)
+	ON_BN_CLICKED(IDC_BUTTON_OPEN_CAMERA, &CMyOpenCVApplicationDlg::OnBnClickedButtonOpenCamera)
+	ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
 
@@ -187,7 +197,8 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(28, _T("组合算法"));
 	selectMethod.InsertString(29, _T("角点检测"));
 	selectMethod.InsertString(30, _T("形态学变换"));
-	selectMethod.InsertString(31, _T("不处理"));
+	selectMethod.InsertString(31, _T("basler相机"));
+	selectMethod.InsertString(32, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -221,6 +232,7 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	::ShowWindow(hParent_s, SW_HIDE);
 
 	initLineConfig();
+
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -650,6 +662,11 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		reduceImage.UseMorphologyEx(image_r, J, method_one_selecter.GetCurSel(), 0, size);
 	}
 		break;
+	case 31:
+	{
+
+	}
+		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -762,6 +779,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		break;
 	case 30:
 		HideMethodThirtyOne();
+		break;
+	case 31:
+		HideMethodThirtyTwo();
 		break;
 	default:
 		break;
@@ -886,6 +906,10 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 30:
 		ShowMethodThirtyOne();
 		m_last_spin_num = 30;
+		break;
+	case 31:
+		ShowMethodThirtyTwo();
+		m_last_spin_num = 31;
 		break;
 	default:
 		break;
@@ -1974,4 +1998,201 @@ void CMyOpenCVApplicationDlg::HideMethodThirtyOne()
 	m_spin_one.ShowWindow(SW_HIDE);
 	method_one_selecter.ShowWindow(SW_HIDE);
 	method_one_selecter.ResetContent();
+}
+
+
+// 相机初始化
+void CMyOpenCVApplicationDlg::initCamera()
+{
+	try 
+	{
+		CTlFactory& tlFactory = CTlFactory::GetInstance();
+
+		DeviceInfoList_t devices;
+
+		if (tlFactory.EnumerateDevices(devices) == 0)
+		{
+			//throw RUNTIME_EXCEPTION("No camera present.");
+		}
+
+		// Create an array of instant cameras for the found devices.
+		CInstantCameraArray cameras(devices.size());
+		
+		for (size_t i = 0; i < cameras.GetSize(); ++i)
+		{
+			cameras[i].Attach(tlFactory.CreateDevice(devices[i]));
+			const string key = cameras[i].GetDeviceInfo().GetModelName().c_str();
+			camerasIndex[key] = i;
+			//allCameras.insert(map<string, CInstantCamera>::value_type(key, cameras[i]));
+		}
+	}
+	catch(GenICam::GenericException &e)
+	{
+		MessageBox(_T("GenericException"));
+	}
+}
+
+
+// basler相机
+void CMyOpenCVApplicationDlg::ShowMethodThirtyTwo()
+{
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.ResetContent();
+	thread thc(&CMyOpenCVApplicationDlg::ThreadCamera,this);
+	thc.detach();
+	m_camera_bt.ShowWindow(SW_SHOW);
+}
+
+
+// basler相机
+void CMyOpenCVApplicationDlg::HideMethodThirtyTwo()
+{
+	//停止线程thc
+	if (cameraRunning)
+	{
+		cameraRunning = false;
+		openCamera.notify_all();
+		grabImage.notify_all();
+	}
+	method_one_selecter.ShowWindow(SW_HIDE);
+	method_one_selecter.ResetContent();
+	m_camera_bt.ShowWindow(SW_HIDE);
+}
+
+
+// 相机线程
+void CMyOpenCVApplicationDlg::ThreadCamera()
+{
+	PylonInitialize();
+	try
+	{
+		CTlFactory& tlFactory = CTlFactory::GetInstance();
+
+		DeviceInfoList_t devices;
+
+		if (tlFactory.EnumerateDevices(devices) == 0)
+		{
+			//throw RUNTIME_EXCEPTION("No camera present.");
+			PylonTerminate();
+			return;
+		}
+		for (size_t i = 0; i < devices.size(); i++)
+			method_one_selecter.InsertString(i, CStringW(devices[i].GetModelName().c_str()));
+		while (true)
+		{
+			try
+			{
+				if (!cameraRunning)
+					break;
+				unique_lock<mutex> lock(mtxCamera);
+				openCamera.wait(lock);
+				lock.unlock();
+				if (!cameraRunning)
+					break;
+				CInstantCamera camera(tlFactory.CreateDevice(devices[method_one_selecter.GetCurSel()]));
+				//获取相机节点映射以获得相机参数
+				INodeMap& nodemap = camera.GetNodeMap();
+				//打开相机
+				camera.Open();
+				//获取相机成像宽度和高度
+				CIntegerPtr width = nodemap.GetNode("Width");
+				CIntegerPtr height = nodemap.GetNode("Height");
+				//设置相机最大缓冲区,默认为10
+				camera.MaxNumBuffer = 5;
+				// 新建pylon ImageFormatConverter对象.
+				CImageFormatConverter formatConverter;
+				//确定输出像素格式
+				formatConverter.OutputPixelFormat = PixelType_BGR8packed;
+				// 创建一个Pylonlmage后续将用来创建OpenCV images
+				CPylonImage pylonImage;
+				while (true)
+				{
+					try
+					{
+						unique_lock<mutex> lock2(mtxImage);
+						grabImage.wait(lock2);
+						lock2.unlock();
+						if (!cameraRunning)
+							break;
+						// 开始抓取c_countOfImagesToGrab images.
+						//相机默认设置连续抓取模式
+						camera.StartGrabbing(1, GrabStrategy_LatestImageOnly);
+
+						//抓取结果数据指针
+						CGrabResultPtr ptrGrabResult;
+
+						// 当c_countOfImagesToGrab images获取恢复成功时，Camera.StopGrabbing() 
+						//被RetrieveResult()方法自动调用停止抓取
+						while (camera.IsGrabbing())
+						{
+							// 等待接收和恢复图像，超时时间设置为5000 ms.
+							camera.RetrieveResult(5000, ptrGrabResult, TimeoutHandling_ThrowException);
+							if (ptrGrabResult->GrabSucceeded())
+							{
+								//将抓取的缓冲数据转化成pylon image.
+								formatConverter.Convert(pylonImage, ptrGrabResult);
+
+								// 将 pylon image转成OpenCV image.
+								image_r = cv::Mat(ptrGrabResult->GetHeight(), ptrGrabResult->GetWidth(), CV_8UC3, (uint8_t *)pylonImage.GetBuffer());
+
+							}
+						}
+					}
+					catch (const GenericException &e)
+					{
+						//抓取图片失败
+					}
+					
+				}
+			}
+			catch (const GenericException &e)
+			{
+				//相机异常断开连接
+			}
+		}
+	}
+	catch (const GenericException &e)
+	{
+
+	}
+	// Releases all pylon resources. 
+	PylonTerminate();
+}
+
+
+void CMyOpenCVApplicationDlg::OnBnClickedButtonOpenCamera()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	if (method_one_selecter.GetCount() == 0)
+	{
+		MessageBox(_T("无可用相机"));
+		return;
+	}
+	if (cameraRunning)
+	{
+		cameraRunning = false;
+		openCamera.notify_all();
+		grabImage.notify_all();
+		m_camera_bt.SetWindowTextW(_T("打开相机"));
+	}
+	else
+	{
+		cameraRunning = true;
+		openCamera.notify_all();
+		m_camera_bt.SetWindowTextW(_T("关闭相机"));
+	}
+}
+
+
+void CMyOpenCVApplicationDlg::OnDestroy()
+{
+	CDialogEx::OnDestroy();
+
+	// TODO: 在此处添加消息处理程序代码
+	if (cameraRunning)
+	{
+		cameraRunning = false;
+		openCamera.notify_all();
+		grabImage.notify_all();
+	}
 }

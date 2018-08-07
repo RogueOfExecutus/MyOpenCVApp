@@ -8,6 +8,9 @@
 #include <string>
 #include "MyReduceImage.h"
 #include <opencv2/opencv.hpp> 
+#include <map>
+#include "pylon/PylonIncludes.h"
+#include <condition_variable>
 
 // CMyOpenCVApplicationDlg 对话框
 class CMyOpenCVApplicationDlg : public CDialogEx
@@ -223,4 +226,23 @@ private:
 	void ShowMethodThirtyOne();
 	// 隐藏形态学变换方法
 	void HideMethodThirtyOne();
+	std::map<std::string, int> camerasIndex;
+	// 相机初始化
+	void initCamera();
+	// basler相机
+	void ShowMethodThirtyTwo();
+	// basler相机
+	void HideMethodThirtyTwo();
+	std::condition_variable openCamera;
+	std::condition_variable grabImage;
+	std::mutex mtxCamera;
+	std::mutex mtxImage;
+	bool cameraRunning = false;
+	// 相机线程
+	void ThreadCamera();
+public:
+	afx_msg void OnBnClickedButtonOpenCamera();
+	// 打开关闭相机
+	CButton m_camera_bt;
+	afx_msg void OnDestroy();
 };
