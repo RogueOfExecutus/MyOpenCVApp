@@ -238,6 +238,7 @@ private:
 	std::mutex mtxCamera;
 	std::mutex mtxImage;
 	bool cameraRunning = false;
+	bool cameraIsOpen = false;
 	// 相机线程
 	void ThreadCamera();
 public:

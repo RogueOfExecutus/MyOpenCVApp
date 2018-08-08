@@ -16,7 +16,7 @@
 #include <cstdlib>
 
 #ifdef _DEBUG
-#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
+#define new DEBUG_NEW
 #endif
 
 using namespace cv;
@@ -2051,6 +2051,7 @@ void CMyOpenCVApplicationDlg::HideMethodThirtyTwo()
 	if (cameraRunning)
 	{
 		cameraRunning = false;
+		cameraIsOpen = false;
 		openCamera.notify_all();
 		grabImage.notify_all();
 	}
@@ -2074,8 +2075,11 @@ void CMyOpenCVApplicationDlg::ThreadCamera()
 		{
 			//throw RUNTIME_EXCEPTION("No camera present.");
 			PylonTerminate();
+			cameraRunning = false;
+			//MessageBox(_T("basler"));
 			return;
 		}
+		cameraRunning = true;
 		for (size_t i = 0; i < devices.size(); i++)
 			method_one_selecter.InsertString(i, CStringW(devices[i].GetModelName().c_str()));
 		while (true)
@@ -2112,8 +2116,11 @@ void CMyOpenCVApplicationDlg::ThreadCamera()
 						unique_lock<mutex> lock2(mtxImage);
 						grabImage.wait(lock2);
 						lock2.unlock();
-						if (!cameraRunning)
+						if (!cameraIsOpen)
+						{
+							camera.Close();
 							break;
+						}
 						// 开始抓取c_countOfImagesToGrab images.
 						//相机默认设置连续抓取模式
 						camera.StartGrabbing(1, GrabStrategy_LatestImageOnly);
@@ -2168,16 +2175,16 @@ void CMyOpenCVApplicationDlg::OnBnClickedButtonOpenCamera()
 		MessageBox(_T("无可用相机"));
 		return;
 	}
-	if (cameraRunning)
+	if (cameraIsOpen)
 	{
-		cameraRunning = false;
+		cameraIsOpen = false;
 		openCamera.notify_all();
 		grabImage.notify_all();
 		m_camera_bt.SetWindowTextW(_T("打开相机"));
 	}
 	else
 	{
-		cameraRunning = true;
+		cameraIsOpen = true;
 		openCamera.notify_all();
 		m_camera_bt.SetWindowTextW(_T("关闭相机"));
 	}
