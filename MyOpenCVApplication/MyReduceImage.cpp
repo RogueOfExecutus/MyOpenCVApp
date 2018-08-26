@@ -18,12 +18,9 @@
 #include <opencv2/opencv.hpp> 
 #include "pylon/PylonIncludes.h"
 
-#ifdef _DEBUG //重载new
-#define new  new(_NORMAL_BLOCK, __FILE__, __LINE__)  
-#endif
-
 using namespace std;
 using namespace cv;
+using namespace cv::ml;
 using namespace zbar;  //添加zbar名称空间 
 using namespace zxing; 
 using namespace Pylon;
@@ -1009,7 +1006,7 @@ bool MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, configForCode config,
 		UseThreshold(gray_all, threshold_output_all, 45, THRESH_BINARY);
 
 		findContours(threshold_output_all, contours_all, hierarchy_all
-			, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//RETR_EXTERNAL表示只寻找最外层轮廓
+			, RETR_EXTERNAL, CHAIN_APPROX_NONE);//RETR_EXTERNAL表示只寻找最外层轮廓
 
 
 		//求最小包围矩形
@@ -1311,4 +1308,96 @@ void MyReduceImage::UseMorphologyEx(const Mat& I, Mat& J, int method, int kernel
 // basler相机
 void MyReduceImage::PylonFiveDemo(Mat& J)
 {
+}
+
+
+void MyReduceImage::UseknnTrain(const Mat& I)
+{
+	Mat gray;
+	if (I.channels() != 1)
+		cvtColor(I, gray, CV_BGR2GRAY);
+	else
+		I.copyTo(gray);
+	int b = 20;
+	int m = gray.rows / b;   //原图为1000*2000
+	int n = gray.cols / b;   //裁剪为5000个20*20的小图块
+	Mat data, labels;   //特征矩阵
+	for (int i = 0; i < m; i++)
+	{
+		int offsetRow = i*b; //列上的偏移量
+		for (int j = 0; j < n; j++)
+		{
+			int offsetCol = j*b;  //行上的偏移量
+								  //截取20*20的小块
+			Mat tmp;
+			gray(Range(offsetRow, offsetRow + b), Range(offsetCol, offsetCol + b)).copyTo(tmp);
+			/*CString n;
+			n.Format(_T("image\\%d_%d.png"), i, j);
+			imwrite(string(CW2A(n.GetString())), tmp);*/
+			data.push_back(tmp.reshape(0, 1));  //序列化后放入特征矩阵
+			labels.push_back((int)i / 5);  //对应的标注
+		}
+
+	}
+	data.convertTo(data, CV_32F); //uchar型转换为cv_32f
+	int samplesNum = data.rows;
+	Mat trainData, trainLabels;
+	trainData = data(Range(0, 5000), Range::all());  
+	trainLabels = labels(Range(0, 5000), Range::all());
+
+	//使用KNN算法
+	int K = 5;
+	Ptr<TrainData> tData = TrainData::create(trainData, ROW_SAMPLE, trainLabels);
+	Ptr<KNearest> model = KNearest::create();
+	model->setDefaultK(K);
+	model->setIsClassifier(true);
+	model->train(tData);
+	model->save("knn.xml");
+
+	
+}
+
+
+// knn临近算法
+void MyReduceImage::UseknnFindNearest(const Mat& I, cv::String filePath, float& r)
+{
+	Ptr<KNearest> model = StatModel::load<KNearest>(filePath);
+	Mat J, dst;
+	I.copyTo(J);
+	cvtColor(J, J, COLOR_BGR2GRAY);
+	threshold(J, J, 48, 255, CV_THRESH_BINARY);
+	//Mat now;
+	//J.copyTo(now);
+	J.copyTo(dst);
+	vector< vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	findContours(J, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+	cvtColor(J, J, COLOR_GRAY2BGR);
+	drawContours(J, contours, -1, (255, 0, 255));
+	imshow("Image", J);
+	vector<Point> point = contours[0];
+	Rect rect = boundingRect(Mat(point));
+
+	for (int i = 0; i < contours.size(); i++)
+	{
+		Rect rect1 = boundingRect(Mat(contours[i]));
+		rectangle(J, rect1.tl(), rect1.br(), Scalar(0, 0, 255), 1, 8, 0);
+	}
+
+	int x = rect.tl().x, y = rect.tl().y;
+	int h = rect.br().x, w = rect.br().y;
+	Mat now = dst(Range(y, w), Range(x, h));
+	//dst(rect).copyTo(now);
+	imshow("now", now);
+	resize(now, now, Size(20, 20));
+
+	Mat_<float>  nums;
+	nums = now.reshape(0, 1);
+	nums.convertTo(nums, CV_32F);
+
+	r = model->predict(nums);
+
+	/*Mat temp;
+	r = model->findNearest(nums, 1, temp);
+	imshow("temp", temp);*/
 }

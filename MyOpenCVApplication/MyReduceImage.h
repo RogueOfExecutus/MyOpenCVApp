@@ -151,5 +151,9 @@ public:
 	void UseMorphologyEx(const Mat& I, Mat& J, int method, int kernel_type, int kernel_size);
 	// basler相机
 	void PylonFiveDemo(Mat& J);
+	// knn算法
+	void UseknnTrain(const Mat& I);
+	// knn临近算法
+	void UseknnFindNearest(const Mat& I, cv::String filePath, float& r);
 };
 

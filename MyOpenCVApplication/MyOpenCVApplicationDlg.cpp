@@ -198,7 +198,8 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(29, _T("角点检测"));
 	selectMethod.InsertString(30, _T("形态学变换"));
 	selectMethod.InsertString(31, _T("basler相机"));
-	selectMethod.InsertString(32, _T("不处理"));
+	selectMethod.InsertString(32, _T("knn字符识别"));
+	selectMethod.InsertString(33, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -667,6 +668,40 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 
 	}
 		break;
+	case 32:
+	{
+		switch (method_one_selecter.GetCurSel())
+		{
+		case 0:
+			reduceImage.UseknnTrain(image_r);
+			break;
+		case 1:
+		{
+			String trainFile = OpenknnTrainFile();
+			float r;
+			reduceImage.UseknnFindNearest(image_r, trainFile, r);
+			CString msgRes;
+			msgRes.Format(_T("识别的数字为：%f"), r);
+			MessageBox(msgRes);
+		}
+			break;
+		default:
+			break;
+		}
+		/*String imgFile = OpenImageFile();
+		J = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+		if (!J.data)
+		{
+			MessageBox(_T("打开数字图片失败"));
+			return;
+		}
+		float res;
+		reduceImage.UseknnTrain(image_r, J, res);
+		CString msgRes;
+		msgRes.Format(_T("识别的数字为：%f"), res);
+		MessageBox(msgRes);*/
+	}
+		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
 		break;
@@ -782,6 +817,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		break;
 	case 31:
 		HideMethodThirtyTwo();
+		break;
+	case 32:
+		HideMethodThirtyThree();
 		break;
 	default:
 		break;
@@ -911,6 +949,10 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		ShowMethodThirtyTwo();
 		m_last_spin_num = 31;
 		break;
+	case 32:
+		ShowMethodThirtyThree();
+		m_last_spin_num = 32;
+		break;
 	default:
 		break;
 	}
@@ -1007,6 +1049,28 @@ void CMyOpenCVApplicationDlg::HideMethodThree()
 }
 
 
+String CMyOpenCVApplicationDlg::OpenknnTrainFile()
+{
+	CFileDialog findFileDlg(
+		TRUE,  // TRUE是创建打开文件对话框，FALSE则创建的是保存文件对话框
+		_T(".xml"),  // 默认的打开文件的类型
+		NULL,  // 默认打开的文件名
+		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,  // 打开只读文件
+		_T("knnXML(*.xml)|*.xml|所有文件 (*.*)|*.*||")  // 所有可以打开的文件类型
+	);
+	//图像名称
+	String imgFile;
+	if (IDOK == findFileDlg.DoModal())
+	{
+		imgFile = (LPCSTR)(CStringA)(findFileDlg.GetPathName());
+	}
+	else
+	{
+		imgFile = "no";
+	}
+	return imgFile;
+}
+
 // 打开图片
 String CMyOpenCVApplicationDlg::OpenImageFile()
 {
@@ -1015,7 +1079,7 @@ String CMyOpenCVApplicationDlg::OpenImageFile()
 		_T(".jpg"),  // 默认的打开文件的类型
 		NULL,  // 默认打开的文件名
 		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,  // 打开只读文件
-		_T("文本文件(*.jpg)|*.jpg|表格文件(*.PNG)|*.PNG|所有文件 (*.*)|*.*||")  // 所有可以打开的文件类型
+		_T("jpg图片(*.jpg)|*.jpg|png图片(*.PNG)|*.PNG|所有文件 (*.*)|*.*||")  // 所有可以打开的文件类型
 	);
 	//图像名称
 	String imgFile;
@@ -1264,7 +1328,6 @@ void on_mouse(int event, int x, int y, int flags, void *ustc)
 	//CMyOpenCVApplicationDlg *pWnd = (CMyOpenCVApplicationDlg *)CWnd::FromHandle(hWnd);
 	if (event == CV_EVENT_LBUTTONDOWN)//左键按下，读取初始坐标
 	{
-		//pWnd->SetSPt(x, y);
 		thisDlg->SetSPt(x, y);
 	}
 	if (event == CV_EVENT_MOUSEMOVE && (flags & CV_EVENT_FLAG_LBUTTON))
@@ -2082,6 +2145,7 @@ void CMyOpenCVApplicationDlg::ThreadCamera()
 		cameraRunning = true;
 		for (size_t i = 0; i < devices.size(); i++)
 			method_one_selecter.InsertString(i, CStringW(devices[i].GetModelName().c_str()));
+		method_one_selecter.SetCurSel(0);
 		while (true)
 		{
 			try
@@ -2202,4 +2266,35 @@ void CMyOpenCVApplicationDlg::OnDestroy()
 		openCamera.notify_all();
 		grabImage.notify_all();
 	}
+}
+
+
+// 计算两线角度
+double CMyOpenCVApplicationDlg::GetTheta(Point p1, Point p2, Point p3, Point p4)
+{
+	//移动线段
+	Point p = Point(p4.x - p3.x + p1.x, p4.y - p3.y + p1.y);
+	//向量内积
+	double cross = (p2.x - p1.x) * (p.x - p1.x) + (p2.y - p1.y) * (p.y - p1.y);
+	//向量的模的积
+	double r1 = sqrt((p2.x - p1.x)*(p2.x - p1.x) + (p2.y - p1.y)*(p2.y - p1.y));
+	double r2 = sqrt((p.x - p1.x)*(p.x - p1.x) + (p.y - p1.y)*(p.y - p1.y));
+	double theta = acos(cross / (r1*r2));
+	return theta;
+}
+
+// 展示knn算法选项
+void CMyOpenCVApplicationDlg::ShowMethodThirtyThree()
+{
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.InsertString(0, _T("训练数据并保存"));
+	method_one_selecter.InsertString(1, _T("识别图像"));
+	method_one_selecter.SetCurSel(0);
+}
+
+// 隐藏knn算法选项
+void CMyOpenCVApplicationDlg::HideMethodThirtyThree()
+{
+	method_one_selecter.ShowWindow(SW_HIDE);
+	method_one_selecter.ResetContent();
 }

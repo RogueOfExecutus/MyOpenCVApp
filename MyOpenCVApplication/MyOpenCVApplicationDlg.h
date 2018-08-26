@@ -71,6 +71,8 @@ private:
 	void ShowMethodThree();
 	// 隐藏图像求和法选项
 	void HideMethodThree();
+	// 打开knn训练集
+	String OpenknnTrainFile();
 public:
 	CEdit m_alpha_edit;
 	CStatic m_static_three;
@@ -246,4 +248,9 @@ public:
 	// 打开关闭相机
 	CButton m_camera_bt;
 	afx_msg void OnDestroy();
+private:
+	// 计算两线角度
+	double GetTheta(Point p1, Point p2, Point p3, Point p4);
+	void ShowMethodThirtyThree();
+	void HideMethodThirtyThree();
 };
