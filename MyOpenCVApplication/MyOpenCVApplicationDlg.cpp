@@ -198,8 +198,9 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(29, _T("角点检测"));
 	selectMethod.InsertString(30, _T("形态学变换"));
 	selectMethod.InsertString(31, _T("basler相机"));
-	selectMethod.InsertString(32, _T("knn字符识别"));
-	selectMethod.InsertString(33, _T("不处理"));
+	selectMethod.InsertString(32, _T("knn近邻算法"));
+	selectMethod.InsertString(33, _T("SVM支持向量机"));
+	selectMethod.InsertString(34, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -678,8 +679,11 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		case 1:
 		{
 			String trainFile = OpenknnTrainFile();
+			if (trainFile == "no")
+				return;
 			float r;
-			reduceImage.UseknnFindNearest(image_r, trainFile, r);
+			image_r.copyTo(J);
+			reduceImage.UseknnFindNearest(J, trainFile, r);
 			CString msgRes;
 			msgRes.Format(_T("识别的数字为：%f"), r);
 			MessageBox(msgRes);
@@ -688,18 +692,31 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		default:
 			break;
 		}
-		/*String imgFile = OpenImageFile();
-		J = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
-		if (!J.data)
+	}
+		break;
+	case 33:
+	{
+		switch (method_one_selecter.GetCurSel())
 		{
-			MessageBox(_T("打开数字图片失败"));
-			return;
+		case 0:
+			reduceImage.UseSVMTrain(image_r);
+			break;
+		case 1:
+		{
+			String trainFile = OpenknnTrainFile();
+			if (trainFile == "no")
+				return;
+			float r;
+			image_r.copyTo(J);
+			reduceImage.UseSVMPredict(J, trainFile, r);
+			CString msgRes;
+			msgRes.Format(_T("识别的数字为：%f"), r);
+			MessageBox(msgRes);
 		}
-		float res;
-		reduceImage.UseknnTrain(image_r, J, res);
-		CString msgRes;
-		msgRes.Format(_T("识别的数字为：%f"), res);
-		MessageBox(msgRes);*/
+			break;
+		default:
+			break;
+		}
 	}
 		break;
 	default:
@@ -820,6 +837,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		break;
 	case 32:
 		HideMethodThirtyThree();
+		break;
+	case 33:
+		HideMethodThirtyFour();
 		break;
 	default:
 		break;
@@ -952,6 +972,10 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 32:
 		ShowMethodThirtyThree();
 		m_last_spin_num = 32;
+		break;
+	case 33:
+		ShowMethodThirtyFour();
+		m_last_spin_num = 33;
 		break;
 	default:
 		break;
@@ -2294,6 +2318,24 @@ void CMyOpenCVApplicationDlg::ShowMethodThirtyThree()
 
 // 隐藏knn算法选项
 void CMyOpenCVApplicationDlg::HideMethodThirtyThree()
+{
+	method_one_selecter.ShowWindow(SW_HIDE);
+	method_one_selecter.ResetContent();
+}
+
+
+// 展示SVM支持向量机算法
+void CMyOpenCVApplicationDlg::ShowMethodThirtyFour()
+{
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.InsertString(0, _T("训练数据并保存"));
+	method_one_selecter.InsertString(1, _T("识别图像"));
+	method_one_selecter.SetCurSel(0);
+}
+
+
+// 隐藏SVM支持向量机算法
+void CMyOpenCVApplicationDlg::HideMethodThirtyFour()
 {
 	method_one_selecter.ShowWindow(SW_HIDE);
 	method_one_selecter.ResetContent();

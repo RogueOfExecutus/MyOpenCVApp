@@ -253,4 +253,8 @@ private:
 	double GetTheta(Point p1, Point p2, Point p3, Point p4);
 	void ShowMethodThirtyThree();
 	void HideMethodThirtyThree();
+	// 展示SVM支持向量机算法
+	void ShowMethodThirtyFour();
+	// 隐藏SVM支持向量机算法
+	void HideMethodThirtyFour();
 };

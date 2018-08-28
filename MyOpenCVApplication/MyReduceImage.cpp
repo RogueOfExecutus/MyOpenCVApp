@@ -1340,7 +1340,7 @@ void MyReduceImage::UseknnTrain(const Mat& I)
 
 	}
 	data.convertTo(data, CV_32F); //uchar型转换为cv_32f
-	int samplesNum = data.rows;
+	//int samplesNum = data.rows;
 	Mat trainData, trainLabels;
 	trainData = data(Range(0, 5000), Range::all());  
 	trainLabels = labels(Range(0, 5000), Range::all());
@@ -1363,12 +1363,14 @@ void MyReduceImage::UseknnFindNearest(const Mat& I, cv::String filePath, float& 
 {
 	Ptr<KNearest> model = StatModel::load<KNearest>(filePath);
 	Mat J, dst;
-	I.copyTo(J);
-	cvtColor(J, J, COLOR_BGR2GRAY);
+	if(I.channels() != 1)
+		cvtColor(I, J, COLOR_BGR2GRAY);
+	else
+		I.copyTo(J);
 	threshold(J, J, 48, 255, CV_THRESH_BINARY);
 	//Mat now;
 	//J.copyTo(now);
-	J.copyTo(dst);
+	/*J.copyTo(dst);
 	vector< vector<Point> > contours;
 	vector<Vec4i> hierarchy;
 	findContours(J, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
@@ -1386,13 +1388,13 @@ void MyReduceImage::UseknnFindNearest(const Mat& I, cv::String filePath, float& 
 
 	int x = rect.tl().x, y = rect.tl().y;
 	int h = rect.br().x, w = rect.br().y;
-	Mat now = dst(Range(y, w), Range(x, h));
+	Mat now = dst(Range(y, w), Range(x, h));*/
 	//dst(rect).copyTo(now);
-	imshow("now", now);
-	resize(now, now, Size(20, 20));
+	//imshow("now", J);
+	resize(J, J, Size(20, 20));
 
 	Mat_<float>  nums;
-	nums = now.reshape(0, 1);
+	nums = J.reshape(0, 1);
 	nums.convertTo(nums, CV_32F);
 
 	r = model->predict(nums);
@@ -1400,4 +1402,67 @@ void MyReduceImage::UseknnFindNearest(const Mat& I, cv::String filePath, float& 
 	/*Mat temp;
 	r = model->findNearest(nums, 1, temp);
 	imshow("temp", temp);*/
+}
+
+
+void MyReduceImage::UseSVMTrain(const Mat& I)
+{
+	Mat gray;
+	if (I.channels() != 1)
+		cvtColor(I, gray, CV_BGR2GRAY);
+	else
+		I.copyTo(gray);
+	int b = 20;
+	int m = gray.rows / b;   //原图为1000*2000
+	int n = gray.cols / b;   //裁剪为5000个20*20的小图块
+	Mat data, labels;   //特征矩阵
+	for (int i = 0; i < n; i++)
+	{
+		int offsetCol = i*b; //列上的偏移量
+		for (int j = 0; j < m; j++)
+		{
+			int offsetRow = j*b;  //行上的偏移量
+								  //截取20*20的小块
+			Mat tmp;
+			gray(Range(offsetRow, offsetRow + b), Range(offsetCol, offsetCol + b)).copyTo(tmp);
+			/*CString n;
+			n.Format(_T("image\\%d_%d.png"), i, j);
+			imwrite(string(CW2A(n.GetString())), tmp);*/
+			data.push_back(tmp.reshape(0, 1));  //序列化后放入特征矩阵
+			labels.push_back((int)j / 5);  //对应的标注
+		}
+	}
+
+	data.convertTo(data, CV_32FC1); //uchar型转换为cv_32f
+	//labels.convertTo(labels, CV_32F);
+	Mat trainData = data(Range(0, 5000), Range::all());
+	Mat trainLabels = labels(Range(0, 5000), Range::all());
+
+	Ptr<TrainData> tData = TrainData::create(trainData, ROW_SAMPLE, trainLabels);
+	Ptr<SVM> model = SVM::create();
+	model->setType(SVM::C_SVC);
+	model->setKernel(SVM::LINEAR);
+	model->setC(1); 
+	model->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 1e-6));
+	model->train(tData);
+	model->save("SVMdata.xml");
+}
+
+
+void MyReduceImage::UseSVMPredict(const Mat& I, cv::String filePath, float& r)
+{
+	Ptr<SVM> model = StatModel::load<SVM>(filePath);
+	Mat J, dst;
+	if (I.channels() != 1)
+		cvtColor(I, J, COLOR_BGR2GRAY);
+	else
+		I.copyTo(J);
+	threshold(J, J, 48, 255, CV_THRESH_BINARY);
+	resize(J, J, Size(20, 20));
+
+	Mat_<float>  nums;
+	nums = J.reshape(0, 1);
+	nums.convertTo(nums, CV_32FC1);
+
+	r = model->predict(nums);
 }

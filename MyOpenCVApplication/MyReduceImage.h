@@ -155,5 +155,7 @@ public:
 	void UseknnTrain(const Mat& I);
 	// knnÁÙ½üËã·¨
 	void UseknnFindNearest(const Mat& I, cv::String filePath, float& r);
+	void UseSVMTrain(const Mat& I);
+	void UseSVMPredict(const Mat& I, cv::String filePath, float& r);
 };
 
