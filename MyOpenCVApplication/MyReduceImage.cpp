@@ -15,15 +15,23 @@
 #include "zxing/BinaryBitmap.h"
 #include "zxing/Binarizer.h"
 #include "zxing/Exception.h"
-#include <opencv2/opencv.hpp> 
+#include <opencv2/opencv.hpp>
+#include <opencv2/xfeatures2d.hpp>
 #include "pylon/PylonIncludes.h"
 
 using namespace std;
 using namespace cv;
 using namespace cv::ml;
+using namespace cv::xfeatures2d;
 using namespace zbar;  //添加zbar名称空间 
 using namespace zxing; 
 using namespace Pylon;
+
+void testAdativeThreshold(int, void*);
+void testCanny(int, void*);
+int kernel_size = 1;
+int offset_C = 0;
+Mat i, j;
 
 uchar table[256];
 
@@ -65,10 +73,37 @@ void MyReduceImage::UseThreshold(const Mat& I, Mat& J, int threshold_value, int 
 {
 	Mat src_gray;
 	if (I.channels() != 1)
-		cvtColor(I, src_gray, CV_RGB2GRAY);
+		cvtColor(I, src_gray, COLOR_BGR2GRAY);
 	else
 		src_gray = I.clone();
-	threshold(src_gray, J, threshold_value, 255, threshold_type);
+	if (threshold_type < 5)
+		threshold(src_gray, J, threshold_value, 255, threshold_type);
+	else
+	{
+		i = src_gray;
+		namedWindow("adaptiveThreshold Demo", WINDOW_AUTOSIZE);
+		offset_C = 0;
+		kernel_size = 1;
+		createTrackbar("offset_C: ", "adaptiveThreshold Demo",
+			&offset_C, 100,testAdativeThreshold);
+
+		createTrackbar("Kernel size:\n 2n +1", "adaptiveThreshold Demo",
+			&kernel_size, 100,testAdativeThreshold);
+		testAdativeThreshold(0, 0);
+		adaptiveThreshold(src_gray, J, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, threshold_value * 2 + 1, 0);
+	}
+}
+
+void testAdativeThreshold(int, void*)
+{
+	adaptiveThreshold(i, j, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, kernel_size * 2 + 3, offset_C);
+	imshow("adaptiveThreshold Demo", j);
+}
+
+void testCanny(int, void *)
+{
+	Canny(i, j, offset_C, kernel_size);
+	imshow("Canny Demo", j);
 }
 
 // 矩阵的掩码操作
@@ -164,6 +199,9 @@ void MyReduceImage::UseDTF(const Mat& I, Mat& magI)
 
 	//! [normalize]
 	normalize(magI, magI, 0, 1, NORM_MINMAX);
+	Mat J = Mat(magI.size(), CV_8UC1);
+	magI.convertTo(J, CV_8UC1, 255, 0);
+	magI = J.clone();
 }
 
 
@@ -275,6 +313,16 @@ void MyReduceImage::UseEdgeDetection(const Mat& I, Mat& J, int method)
 		blur(I, temp, Size(3, 3));
 		/// 运行Canny算子
 		Canny(temp, J, 80, 200, 3);
+		namedWindow("Canny Demo", WINDOW_NORMAL);
+		offset_C = 80;
+		kernel_size = 200;
+		i = temp;
+		createTrackbar("low_thresh: ", "Canny Demo",
+			&offset_C, 500, testCanny);
+
+		createTrackbar("high_thresh:", "Canny Demo",
+			&kernel_size, 800, testCanny);
+		testCanny(0, 0);
 	}
 	else
 	{
@@ -294,6 +342,7 @@ void MyReduceImage::UseEdgeDetection(const Mat& I, Mat& J, int method)
 		convertScaleAbs(grad_y, abs_grad_y);
 		/// 合并梯度(近似)
 		addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0, J);
+		//J = abs_grad_y - abs_grad_x;
 	}
 }
 
@@ -307,7 +356,7 @@ void MyReduceImage::UseHoughLines(const Mat& I, Mat& J, double rho, double theta
 	else
 	{
 		temp = J;
-		cvtColor(J, J, CV_GRAY2BGR);
+		cvtColor(J, J, COLOR_GRAY2BGR);
 	}
 	if (method == 0)
 	{
@@ -361,7 +410,7 @@ void MyReduceImage::UseHoughLines(const Mat& I, Mat& J, double rho, double theta
 			pt1.y = cvRound(y0 + 1000 * (a));
 			pt2.x = cvRound(x0 - 1000 * (-b));
 			pt2.y = cvRound(y0 - 1000 * (a));
-			line(J, pt1, pt2, Scalar(0, 0, 255), 1, CV_AA);
+			line(J, pt1, pt2, Scalar(0, 0, 255), 1, LINE_AA);
 		}
 	}
 	else if (method == 1)
@@ -372,7 +421,7 @@ void MyReduceImage::UseHoughLines(const Mat& I, Mat& J, double rho, double theta
 		for (size_t i = 0; i < lines.size(); i++)
 		{
 			Vec4i l = lines[i];
-			line(J, Point(l[0], l[1]), Point(l[2], l[3]), color[i%3], 1, CV_AA);
+			line(J, Point(l[0], l[1]), Point(l[2], l[3]), color[i%3], 1, LINE_AA);
 		}
 	}
 }
@@ -385,7 +434,7 @@ void MyReduceImage::UseHoughCircles(const Mat& I, Mat& J)
 	Mat temp;
 	if (I.channels() != 1)
 	{
-		cvtColor(I, temp, CV_BGR2GRAY);
+		cvtColor(I, temp, COLOR_BGR2GRAY);
 	}
 	else
 		temp = J;
@@ -394,7 +443,7 @@ void MyReduceImage::UseHoughCircles(const Mat& I, Mat& J)
 	vector<Vec3f> circles;
 
 	/// Apply the Hough Transform to find the circles
-	HoughCircles(temp, circles, CV_HOUGH_GRADIENT, 1, temp.rows / 8, 200, 100, 0, 0);
+	HoughCircles(temp, circles, HOUGH_GRADIENT, 1, temp.rows / 8, 200, 100, 0, 0);
 
 	/// Draw the circles detected
 	for (size_t i = 0; i < circles.size(); i++)
@@ -459,7 +508,7 @@ void MyReduceImage::UseRemap(const Mat& I, Mat& J, int type)
 	map_x.create(I.size(), CV_32FC1);
 	map_y.create(I.size(), CV_32FC1);
 	update_map(type, I.rows, I.cols);
-	remap(I, J, map_x, map_y, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
+	remap(I, J, map_x, map_y, INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
 }
 
 // 仿射变换
@@ -475,6 +524,9 @@ void MyReduceImage::UseWarpAffine(const Mat& I, Mat& J)
 	dstTri[0] = Point2f(I.cols*0.0, I.rows*0.33);
 	dstTri[1] = Point2f(I.cols*0.85, I.rows*0.25);
 	dstTri[2] = Point2f(I.cols*0.15, I.rows*0.7);
+	// (573,1279)
+	// (1537, 1321)
+	// (561, 1767)
 
 	Mat warp_mat(2, 3, CV_32FC1);
 	warp_mat = getAffineTransform(srcTri, dstTri);
@@ -486,10 +538,62 @@ void MyReduceImage::UseWarpAffine(const Mat& I, Mat& J)
 // 旋转图片（放射变换法）
 void MyReduceImage::RotateImage(const Mat& I, Mat& J, double angle)
 {
-	Point center = Point(I.cols / 2, I.rows / 2);
-	Mat rot_mat(2, 3, CV_32FC1);
-	rot_mat = getRotationMatrix2D(center, angle, 1);
-	warpAffine(I, J, rot_mat, I.size());
+	if (angle == 180.0)
+	{
+		Point center = Point(I.cols / 2, I.rows / 2);
+		Mat rot_mat(2, 3, CV_32FC1);
+		rot_mat = getRotationMatrix2D(center, 180, 1);
+		warpAffine(I, J, rot_mat, I.size());
+	}
+	else if (angle == 90.0)
+	{
+		int c = I.channels();
+		J = Mat(I.cols, I.rows, I.type());
+		for (int i = 0; i < J.rows; i++)
+		{
+			for (int j = 0; j < J.cols; j++)
+			{
+				if (c == 1)
+				{
+					J.at<uchar>(i, J.cols - j - 1) = I.at<uchar>(j, i);
+				}
+				if (c == 3)
+				{
+					J.at<Vec3b>(i, J.cols - j - 1)[0] = I.at<Vec3b>(j, i)[0];
+					J.at<Vec3b>(i, J.cols - j - 1)[1] = I.at<Vec3b>(j, i)[1];
+					J.at<Vec3b>(i, J.cols - j - 1)[2] = I.at<Vec3b>(j, i)[2];
+				}
+			}
+		}
+	}
+	else if (angle == 270.0)
+	{
+		int c = I.channels();
+		J = Mat(I.cols, I.rows, I.type());
+		for (int i = 0; i < J.rows; i++)
+		{
+			for (int j = 0; j < J.cols; j++)
+			{
+				if (c == 1)
+				{
+					J.at<uchar>(J.rows - i - 1, j) = I.at<uchar>(j, i);
+				}
+				if (c == 3)
+				{
+					J.at<Vec3b>(J.rows - i - 1, j)[0] = I.at<Vec3b>(j, i)[0];
+					J.at<Vec3b>(J.rows - i - 1, j)[1] = I.at<Vec3b>(j, i)[1];
+					J.at<Vec3b>(J.rows - i - 1, j)[2] = I.at<Vec3b>(j, i)[2];
+				}
+			}
+		}
+	}
+	else
+	{
+		Point center = Point(I.cols / 2, I.rows / 2);
+		Mat rot_mat(2, 3, CV_32FC1);
+		rot_mat = getRotationMatrix2D(center, angle, 1);
+		warpAffine(I, J, rot_mat, I.size());
+	}
 }
 
 
@@ -497,8 +601,9 @@ void MyReduceImage::RotateImage(const Mat& I, Mat& J, double angle)
 void MyReduceImage::UseEqualizeHist(const Mat& I, Mat& J)
 {
 	Mat temp;
-	if (I.channels() != 1) {
-		cvtColor(I, temp, CV_BGR2GRAY);
+	if (I.channels() != 1) 
+	{
+		cvtColor(I, temp, COLOR_BGR2GRAY);
 	}
 	else
 	{
@@ -552,7 +657,7 @@ void MyReduceImage::UseCalcHistAndDraw(const Mat& I, Mat& J, int bins)
 				rectangle(histImg, Point(h*scale, s*scale),
 					Point((h + 1)*scale - 1, (s + 1)*scale - 1),
 					Scalar::all(intensity),
-					CV_FILLED);
+					FILLED);
 			}
 		histImg.copyTo(J);
 	}
@@ -605,7 +710,7 @@ void MyReduceImage::UseCalcHist(const Mat& I, Mat& J, int hbins, int sbins)
 		const float* histRange_bgr[] = { h_range , s_range };
 		Mat hsv;
 		MatND hist;
-		cvtColor(I, hsv, CV_BGR2HSV);
+		cvtColor(I, hsv, COLOR_BGR2HSV);
 		calcHist(&hsv, 1, channels, Mat(), hist, 2, histSize, histRange_bgr, uniform, accumulate);
 
 		//normalize(hist, hist, 0, 1, NORM_MINMAX, -1, Mat());
@@ -636,14 +741,14 @@ void MyReduceImage::UseCalcBackProject(const Mat& I, const Mat& J, Mat& K, int h
 	const float* histRange_bgr[] = { h_range , s_range };
 	Mat hsv;
 	MatND backproj;
-	cvtColor(J, hsv, CV_BGR2HSV);
+	cvtColor(J, hsv, COLOR_BGR2HSV);
 	calcBackProject(&hsv, 1, channels, temp, backproj, histRange_bgr, 1, true);
 	backproj.copyTo(K);
 }
 
 
 // 模板匹配方法
-void MyReduceImage::UseMatchTemplate(const Mat& I, const Mat& templ, Mat& J, int method)
+void MyReduceImage::UseMatchTemplate(const Mat& I, const Mat& templ, Mat& J, int method, double& value, Point& p)
 {
 	I.copyTo(J);
 	if (I.channels() != templ.channels())
@@ -656,31 +761,38 @@ void MyReduceImage::UseMatchTemplate(const Mat& I, const Mat& templ, Mat& J, int
 
 	matchTemplate(I, templ, result, method);
 
-	normalize(result, result, 0, 1, NORM_MINMAX, -1, Mat());
+	//normalize(result, result, 0, 1, NORM_MINMAX, -1, Mat());
 
 	Point minLoc;
 	Point maxLoc;
-	Point matchLoc;
+	double minValue;
+	double maxValue;
 
-	minMaxLoc(result, 0, 0, &minLoc, &maxLoc);
-	if (method == CV_TM_SQDIFF || method == CV_TM_SQDIFF_NORMED)
-		matchLoc = minLoc;
+	minMaxLoc(result, &minValue, &maxValue, &minLoc, &maxLoc);
+	if (method == TM_SQDIFF || method == TM_SQDIFF_NORMED)
+	{
+		p = minLoc;
+		value = minValue;
+	}
 	else
-		matchLoc = maxLoc;
+	{
+		p = maxLoc;
+		value = maxValue;
+	}
 
-	rectangle(J, matchLoc, Point(matchLoc.x + templ.cols, matchLoc.y + templ.rows), Scalar::all(0), 2, 8, 0);
-	rectangle(result, matchLoc, Point(matchLoc.x + templ.cols, matchLoc.y + templ.rows), Scalar::all(0), 2, 8, 0);
+	rectangle(J, p, Point(p.x + templ.cols, p.y + templ.rows), Scalar::all(255), 10, 8, 0);
+	rectangle(result, p, Point(p.x + templ.cols, p.y + templ.rows), Scalar::all(0), 2, 8, 0);
 
 	imshow("result", result);
 }
 
 
 // 绘画轮廓
-void MyReduceImage::FindAndDrawContours(const Mat& I, Mat& J, int thresh)
+void MyReduceImage::FindAndDrawContours(const Mat& I, Mat& J, int thresh, int method)
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh, true);
+	FindAllContours(I, contours, hierarchy, thresh, true, method);
 	RNG rng(12345);
 	for (int i = 0; i < contours.size(); i++)
 	{
@@ -693,7 +805,7 @@ void MyReduceImage::FindAndDrawContours(const Mat& I, Mat& J, int thresh)
 
 
 // 寻找轮廓
-void MyReduceImage::FindAllContours(const Mat& I, vector<vector<Point>>& contours, vector<Vec4i>& hierarchy, int thresh, bool cannyOrThresh)
+void MyReduceImage::FindAllContours(const Mat& I, vector<vector<Point>>& contours, vector<Vec4i>& hierarchy, int thresh, bool cannyOrThresh, int method)
 {
 	Mat temp;
 	if (I.channels() == 1)
@@ -702,7 +814,7 @@ void MyReduceImage::FindAllContours(const Mat& I, vector<vector<Point>>& contour
 	}
 	else
 	{
-		cvtColor(I, temp, CV_BGR2GRAY);
+		cvtColor(I, temp, COLOR_BGR2GRAY);
 	}
 	UseBlur(temp, temp, 1, 3);
 	if (cannyOrThresh)
@@ -711,7 +823,17 @@ void MyReduceImage::FindAllContours(const Mat& I, vector<vector<Point>>& contour
 		UseThreshold(temp, temp, thresh, THRESH_BINARY);
 
 	/// 寻找轮廓
-	findContours(temp, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+	switch (method)
+	{
+	case 0:
+		findContours(temp, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
+		break;
+	case 1:
+		findContours(temp, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+		break;
+	default:
+		break;
+	}
 }
 
 // 寻找凸包
@@ -728,7 +850,7 @@ void MyReduceImage::FindAndDrawConvexHull(const Mat& I, Mat& J, int thresh, bool
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh, false);
+	FindAllContours(I, contours, hierarchy, thresh, false, 0);
 	int len = contours.size();
 	vector<vector<Point> > hull(len);
 	FindConvexHull(contours, hull);
@@ -749,7 +871,7 @@ void MyReduceImage::UseApproxPolyDP(const Mat& I, Mat& J, int thresh, bool close
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh, false);
+	FindAllContours(I, contours, hierarchy, thresh, false, 0);
 
 	/// 多边形逼近轮廓 + 获取矩形和圆形边界框
 	vector<vector<Point> > contours_poly(contours.size());
@@ -772,7 +894,7 @@ void MyReduceImage::UseBoundingRect(const Mat& I, Mat& J, int thresh)
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh, false);
+	FindAllContours(I, contours, hierarchy, thresh, false, 0);
 	int len = contours.size();
 	vector<Rect> boundRect(len);
 	for (int i = 0; i < len; i++)
@@ -788,7 +910,7 @@ void MyReduceImage::UseMinAreaRect(const Mat& I, Mat& J, int thresh)
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh, false);
+	FindAllContours(I, contours, hierarchy, thresh, false, 0);
 	int len = contours.size();
 
 	vector<Point2f[4]> vertices(len);//定义矩形的4个顶点
@@ -808,7 +930,7 @@ void MyReduceImage::UseMinEnclosingCircle(const Mat& I, Mat& J, int thresh)
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh, false);
+	FindAllContours(I, contours, hierarchy, thresh, false, 0);
 	vector<Point2f>center(contours.size());
 	vector<float>radius(contours.size());
 	int len = contours.size();
@@ -850,7 +972,7 @@ void MyReduceImage::UseFitEllipse(const Mat& I, Mat& J, int thresh)
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh, false);
+	FindAllContours(I, contours, hierarchy, thresh, false, 0);
 	int len = contours.size();
 
 	for (int i = 0; i < len; i++)
@@ -867,7 +989,7 @@ void MyReduceImage::FindMoments(const Mat& I, Mat& J, int thresh)
 {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	FindAllContours(I, contours, hierarchy, thresh, true);
+	FindAllContours(I, contours, hierarchy, thresh, true, 0);
 	int len = contours.size();
 	vector<Moments> mu(len);
 	vector<Point2f> mc(len);
@@ -891,7 +1013,7 @@ void MyReduceImage::ScanBarCode(const Mat& I, string& type, string& data)
 	}
 	else
 	{
-		cvtColor(I, temp, CV_BGR2GRAY);
+		cvtColor(I, temp, COLOR_BGR2GRAY);
 	}
 
 	ImageScanner scanner;
@@ -938,7 +1060,7 @@ bool MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, configForCode config,
 	Mat drawing2 = Mat::zeros(I.size(), CV_8UC3);
 	//UseThreshold(temp, threshold_output, threshold, THRESH_BINARY);
 	imshow("threshold_output", temp);
-	findContours(temp, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_NONE, Point(0, 0));
+	findContours(temp, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE, Point(0, 0));
 
 
 	RNG rng(12345);
@@ -1000,7 +1122,7 @@ bool MyReduceImage::FindCodeCoutours(const Mat& I, Mat& J, configForCode config,
 		Mat gray_all, threshold_output_all;
 		vector<vector<Point> > contours_all;
 		vector<Vec4i> hierarchy_all;
-		cvtColor(drawing2, gray_all, CV_BGR2GRAY);
+		cvtColor(drawing2, gray_all, COLOR_BGR2GRAY);
 
 
 		UseThreshold(gray_all, threshold_output_all, 45, THRESH_BINARY);
@@ -1052,7 +1174,7 @@ void MyReduceImage::PretreatmentForFindCode(const Mat& I, Mat& J, configForCode 
 	}
 	else
 	{
-		cvtColor(I, temp, CV_BGR2GRAY);
+		cvtColor(I, temp, COLOR_BGR2GRAY);
 	}
 	UseThreshold(temp, temp, config.threshold, THRESH_BINARY);
 	for (int i = 0; i < config.ErosionTimes; i++)
@@ -1079,7 +1201,7 @@ bool MyReduceImage::PretreatmentForFindLine(const Mat& I, configForLine config, 
 	}
 	else
 	{
-		cvtColor(I, temp, CV_BGR2GRAY);
+		cvtColor(I, temp, COLOR_BGR2GRAY);
 	}
 	//阈值
 	UseThreshold(temp, temp, config.threshold, THRESH_BINARY);
@@ -1111,7 +1233,7 @@ void MyReduceImage::PretreatmentForScanCode(const Mat& I, Mat& J, configForScan 
 	}
 	else
 	{
-		cvtColor(I, J, CV_BGR2GRAY);
+		cvtColor(I, J, COLOR_BGR2GRAY);
 	}
 	UseThreshold(J, J, config.threshold, 0);
 	if (config.ErosionTimes)
@@ -1130,7 +1252,7 @@ void MyReduceImage::UseCornerHarris(const Mat& I, Mat& dst_norm, Mat& dst_norm_s
 	}
 	else
 	{
-		cvtColor(I, temp, CV_BGR2GRAY);
+		cvtColor(I, temp, COLOR_BGR2GRAY);
 	}
 	Mat dst = Mat::zeros(I.size(), CV_32FC1);
 
@@ -1174,7 +1296,7 @@ void MyReduceImage::UseGoodFeaturesToTrack(const Mat& I, vector<Point2f>& corner
 	}
 	else
 	{
-		cvtColor(I, temp, CV_BGR2GRAY);
+		cvtColor(I, temp, COLOR_BGR2GRAY);
 	}
 	if (maxCorners < 1)  
 		maxCorners = 1; 
@@ -1195,7 +1317,7 @@ void MyReduceImage::DrawCorners(const Mat& I, Mat& J, int maxCorners, double qua
 {
 	J = I.clone();
 	if (J.channels() == 1)
-		cvtColor(J, J, CV_GRAY2BGR);
+		cvtColor(J, J, COLOR_GRAY2BGR);
 	vector<Point2f> corners;
 	RNG rng(12345);
 	UseGoodFeaturesToTrack(I, corners, maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
@@ -1217,7 +1339,7 @@ bool MyReduceImage::ScanBarCodeForZxing(const Mat& I, int codeType, string& data
 	}
 	else
 	{
-		cvtColor(I, temp, CV_BGR2GRAY);
+		cvtColor(I, temp, COLOR_BGR2GRAY);
 	}
 	try
 	{
@@ -1276,7 +1398,7 @@ void MyReduceImage::DrawCodePoint(Mat& J, vector<Point> codePoint)
 	if (!len > 1)
 		return;
 	if (J.channels() == 1)
-		cvtColor(J, J, CV_GRAY2BGR);
+		cvtColor(J, J, COLOR_GRAY2BGR);
 	for (int j = 0; j < len; j++)// Draw circle
 		circle(J, codePoint[j], 10, Scalar(110, 220, 0), 2);
 
@@ -1313,38 +1435,8 @@ void MyReduceImage::PylonFiveDemo(Mat& J)
 
 void MyReduceImage::UseknnTrain(const Mat& I)
 {
-	Mat gray;
-	if (I.channels() != 1)
-		cvtColor(I, gray, CV_BGR2GRAY);
-	else
-		I.copyTo(gray);
-	int b = 20;
-	int m = gray.rows / b;   //原图为1000*2000
-	int n = gray.cols / b;   //裁剪为5000个20*20的小图块
-	Mat data, labels;   //特征矩阵
-	for (int i = 0; i < m; i++)
-	{
-		int offsetRow = i*b; //列上的偏移量
-		for (int j = 0; j < n; j++)
-		{
-			int offsetCol = j*b;  //行上的偏移量
-								  //截取20*20的小块
-			Mat tmp;
-			gray(Range(offsetRow, offsetRow + b), Range(offsetCol, offsetCol + b)).copyTo(tmp);
-			/*CString n;
-			n.Format(_T("image\\%d_%d.png"), i, j);
-			imwrite(string(CW2A(n.GetString())), tmp);*/
-			data.push_back(tmp.reshape(0, 1));  //序列化后放入特征矩阵
-			labels.push_back((int)i / 5);  //对应的标注
-		}
-
-	}
-	data.convertTo(data, CV_32F); //uchar型转换为cv_32f
-	//int samplesNum = data.rows;
 	Mat trainData, trainLabels;
-	trainData = data(Range(0, 5000), Range::all());  
-	trainLabels = labels(Range(0, 5000), Range::all());
-
+	PrepareToTrain(I, trainData, trainLabels, 20);
 	//使用KNN算法
 	int K = 5;
 	Ptr<TrainData> tData = TrainData::create(trainData, ROW_SAMPLE, trainLabels);
@@ -1353,13 +1445,11 @@ void MyReduceImage::UseknnTrain(const Mat& I)
 	model->setIsClassifier(true);
 	model->train(tData);
 	model->save("knn.xml");
-
-	
 }
 
 
 // knn临近算法
-void MyReduceImage::UseknnFindNearest(const Mat& I, cv::String filePath, float& r)
+void MyReduceImage::UseknnFindNearest(const Mat& I, string filePath, float& r, vector<float>& results, vector<float>& neighborResponses, vector<float>& dist)
 {
 	Ptr<KNearest> model = StatModel::load<KNearest>(filePath);
 	Mat J, dst;
@@ -1367,7 +1457,7 @@ void MyReduceImage::UseknnFindNearest(const Mat& I, cv::String filePath, float& 
 		cvtColor(I, J, COLOR_BGR2GRAY);
 	else
 		I.copyTo(J);
-	threshold(J, J, 48, 255, CV_THRESH_BINARY);
+	//threshold(J, J, 48, 255, CV_THRESH_BINARY);
 	//Mat now;
 	//J.copyTo(now);
 	/*J.copyTo(dst);
@@ -1390,53 +1480,25 @@ void MyReduceImage::UseknnFindNearest(const Mat& I, cv::String filePath, float& 
 	int h = rect.br().x, w = rect.br().y;
 	Mat now = dst(Range(y, w), Range(x, h));*/
 	//dst(rect).copyTo(now);
-	//imshow("now", J);
 	resize(J, J, Size(20, 20));
+
+	imshow("now", J);
 
 	Mat_<float>  nums;
 	nums = J.reshape(0, 1);
 	nums.convertTo(nums, CV_32F);
 
-	r = model->predict(nums);
+	//r = model->predict(nums);
+	// Mat results, neighborResponses, dist;
+	r = model->findNearest(nums, 8, results, neighborResponses, dist);
 
-	/*Mat temp;
-	r = model->findNearest(nums, 1, temp);
-	imshow("temp", temp);*/
 }
 
 
 void MyReduceImage::UseSVMTrain(const Mat& I)
 {
-	Mat gray;
-	if (I.channels() != 1)
-		cvtColor(I, gray, CV_BGR2GRAY);
-	else
-		I.copyTo(gray);
-	int b = 20;
-	int m = gray.rows / b;   //原图为1000*2000
-	int n = gray.cols / b;   //裁剪为5000个20*20的小图块
-	Mat data, labels;   //特征矩阵
-	for (int i = 0; i < n; i++)
-	{
-		int offsetCol = i*b; //列上的偏移量
-		for (int j = 0; j < m; j++)
-		{
-			int offsetRow = j*b;  //行上的偏移量
-								  //截取20*20的小块
-			Mat tmp;
-			gray(Range(offsetRow, offsetRow + b), Range(offsetCol, offsetCol + b)).copyTo(tmp);
-			/*CString n;
-			n.Format(_T("image\\%d_%d.png"), i, j);
-			imwrite(string(CW2A(n.GetString())), tmp);*/
-			data.push_back(tmp.reshape(0, 1));  //序列化后放入特征矩阵
-			labels.push_back((int)j / 5);  //对应的标注
-		}
-	}
-
-	data.convertTo(data, CV_32FC1); //uchar型转换为cv_32f
-	//labels.convertTo(labels, CV_32F);
-	Mat trainData = data(Range(0, 5000), Range::all());
-	Mat trainLabels = labels(Range(0, 5000), Range::all());
+	Mat trainData, trainLabels;
+	PrepareToTrain(I, trainData, trainLabels, 20);
 
 	Ptr<TrainData> tData = TrainData::create(trainData, ROW_SAMPLE, trainLabels);
 	Ptr<SVM> model = SVM::create();
@@ -1449,7 +1511,7 @@ void MyReduceImage::UseSVMTrain(const Mat& I)
 }
 
 
-void MyReduceImage::UseSVMPredict(const Mat& I, cv::String filePath, float& r)
+void MyReduceImage::UseSVMPredict(const Mat& I, string filePath, float& r)
 {
 	Ptr<SVM> model = StatModel::load<SVM>(filePath);
 	Mat J, dst;
@@ -1457,7 +1519,7 @@ void MyReduceImage::UseSVMPredict(const Mat& I, cv::String filePath, float& r)
 		cvtColor(I, J, COLOR_BGR2GRAY);
 	else
 		I.copyTo(J);
-	threshold(J, J, 48, 255, CV_THRESH_BINARY);
+	threshold(J, J, 48, 255, THRESH_BINARY);
 	resize(J, J, Size(20, 20));
 
 	Mat_<float>  nums;
@@ -1465,4 +1527,286 @@ void MyReduceImage::UseSVMPredict(const Mat& I, cv::String filePath, float& r)
 	nums.convertTo(nums, CV_32FC1);
 
 	r = model->predict(nums);
+}
+
+
+void MyReduceImage::PrepareToTrain(const Mat& I, Mat& TrainData, Mat& Labels, int size)
+{
+	Mat gray;
+	if (I.channels() != 1)
+		cvtColor(I, gray, COLOR_BGR2GRAY);
+	else
+		I.copyTo(gray);
+	//int b = 20;
+	int m = gray.rows / size;   //原图为1000*2000
+	int n = gray.cols / size;   //裁剪为5000个20*20的小图块
+	Mat data, labels;   //特征矩阵
+	for (int i = 0; i < n; i++)
+	{
+		int offsetCol = i*size; //列上的偏移量
+		for (int j = 0; j < m; j++)
+		{
+			int offsetRow = j*size;  //行上的偏移量
+								  //截取20*20的小块
+			Mat tmp;
+			gray(Range(offsetRow, offsetRow + size), Range(offsetCol, offsetCol + size)).copyTo(tmp);
+			CString n;
+			n.Format(_T("image\\%d\\%d_%d.png"), j / 5, i, j);
+			imwrite(string(CW2A(n.GetString())), tmp);
+			data.push_back(tmp.reshape(0, 1));  //序列化后放入特征矩阵
+			labels.push_back((int)j / 5);  //对应的标注
+		}
+	}
+
+	data.convertTo(data, CV_32FC1); //uchar型转换为cv_32f
+									//labels.convertTo(labels, CV_32F);
+	TrainData = data(Range(0, m*n), Range::all());
+	Labels = labels(Range(0, m*n), Range::all());
+}
+
+
+
+bool MyReduceImage::readNumClassData(const string& filename, int var_count, Mat& _data, Mat& _responses)
+{
+	const int M = 1024;
+	char buf[M + 2];
+
+	Mat el_ptr(1, var_count, CV_32F);
+	int i;
+	vector<int> responses;
+
+	_data.release();
+	_responses.release();
+	FILE* f;
+	fopen_s(&f, filename.c_str(), "rt");
+	if (!f)
+	{
+		cout << "Could not read the database " << filename << endl;
+		return false;
+	}
+
+	for (;;)
+	{
+		char* ptr;
+		if (!fgets(buf, M, f) || !strchr(buf, ','))
+			break;
+		responses.push_back((int)buf[0]);
+		ptr = buf + 2;
+		for (i = 0; i < var_count; i++)
+		{
+			int n = 0;
+			sscanf_s(ptr, "%f%n", &el_ptr.at<float>(i), &n);
+			ptr += n + 1;
+		}
+		if (i < var_count)
+			break;
+		_data.push_back(el_ptr);
+	}
+	fclose(f);
+	Mat(responses).copyTo(_responses);
+	return true;
+}
+
+
+Ptr<TrainData> MyReduceImage::prepareTrainData(const Mat& data, const Mat& responses, int ntrain_samples)
+{
+	Mat sample_idx = Mat::zeros(1, data.rows, CV_8U);
+	Mat train_samples = sample_idx.colRange(0, ntrain_samples);
+	train_samples.setTo(Scalar::all(1));
+
+	int nvars = data.cols;
+	Mat var_type(nvars + 1, 1, CV_8U);
+	var_type.setTo(Scalar::all(VAR_ORDERED));
+	var_type.at<uchar>(nvars) = VAR_CATEGORICAL;
+
+	return TrainData::create(data, ROW_SAMPLE, responses,
+		noArray(), sample_idx, noArray(), var_type);
+}
+
+
+void MyReduceImage::UseSVMTrain(const string data_filename)
+{
+	Mat data;
+	Mat responses;
+	readNumClassData(data_filename, 16, data, responses);
+
+	int nsamples_all = data.rows;
+	int ntrain_samples = (int)(nsamples_all*0.8);
+
+	Ptr<SVM> model;
+	Ptr<TrainData> tdata = prepareTrainData(data, responses, ntrain_samples);
+	model = SVM::create();
+	model->setType(SVM::C_SVC);
+	model->setKernel(SVM::LINEAR);
+	model->setC(1);
+	model->train(tdata);
+	model->save("SVMdata2.xml");
+}
+
+
+// 拉普拉斯变换
+void MyReduceImage::UseLaplacian(Mat& I, Mat& J, int aperture)
+{
+	Mat temp;
+	Laplacian(I, temp, CV_32F, aperture);
+	temp.convertTo(J, CV_8U, 1.0, -50);
+	J = I - J;
+}
+
+
+void MyReduceImage::findAllWord(const Mat& I, Mat& J, int offset, Mat& data, Mat& labels, vector<Rect>& rects)
+{
+	//J = Mat(I.cols, I.rows, I.type());
+	int c = I.channels();
+
+	if (c == 1)
+	{
+		I.copyTo(J);
+		//cvtColor(I, J, CV_GRAY2BGR);
+	}
+	else if (c == 3)
+	{
+		//I.copyTo(J);
+		cvtColor(I, J, COLOR_BGR2GRAY);
+	}
+
+	//Scalar color[3] = { Scalar(255,0,0), Scalar(0,255,0), Scalar(0,0,255) };
+	CString folder;
+	//char ch[] = {'R', '-', '4', '1', '0', '3', '9', '6', '8', '2'};
+	char* ch = "R-41039683";
+	//vector<Rect> rects;
+	if (rects.empty())
+	{
+		Mat temp;
+		J.copyTo(temp);
+		UseThreshold(temp, temp, 150, THRESH_BINARY_INV);
+		vector<vector<Point>> contours;
+		vector<Vec4i> hierarchy;
+		findContours(temp, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+		for (int i = 0; i < 10; i++)
+		{
+			Rect r = boundingRect(contours[i]);
+			int index = i;
+			for (int j = 0; j < i; j++)
+			{
+				if (r.br().x < rects[j].br().x)
+				{
+					index = j;
+					break;
+				}
+			}
+			rects.insert(rects.begin() + index, r);
+		}
+	}
+
+	//Mat data, labels;   //特征矩阵
+	for (int i = 0; i < 10; i++)
+	{
+		folder.Format(_T("imageBackUp\\%c\\%d_%d.png"), ch[i % 10], i, offset);
+		//rectangle(J, r, color[i % 3], 1, 8, 0);
+		Mat tmp = J(rects[i]);
+		imwrite(string(CW2A(folder.GetString())), tmp);
+		resize(tmp, tmp, Size(20, 20));
+		data.push_back(tmp.reshape(0, 1));  //序列化后放入特征矩阵
+		labels.push_back((int)ch[i]);  //对应的标注
+	}
+
+	/*int K = 5;
+	Ptr<TrainData> tData = TrainData::create(data, ROW_SAMPLE, labels);
+	Ptr<KNearest> model = KNearest::create();
+	model->setDefaultK(K);
+	model->setIsClassifier(true);
+	model->train(tData);
+	model->save("baterryKnn.xml");*/
+}
+
+
+// 端子检测
+void MyReduceImage::UseBlocksChecker(const Mat& I, Mat& J, int offset)
+{
+	//(40,1161),(1216,1901)
+	Mat temp = I(Rect(40, 1161, 1176, 740)).clone();
+	//Mat temp = I(Rect(366, 892, 1362, 875)).clone();
+	Mat tempa = temp.clone();
+	threshold(temp, temp, 200, 255, THRESH_BINARY);
+
+	Mat grad_x, grad_y;
+	Mat abs_grad_x, abs_grad_y;
+	Sobel(temp, grad_x, CV_16S, 1, 0);
+	Sobel(temp, grad_y, CV_16S, 0, 1);
+	//	Scharr(I, grad_x, CV_16S, 1, 0, 1, 0, BORDER_DEFAULT);
+	//	Scharr(I, grad_y, CV_16S, 0, 1, 1, 0, BORDER_DEFAULT);
+	convertScaleAbs(grad_x, abs_grad_x);
+	convertScaleAbs(grad_y, abs_grad_y);
+	temp = abs_grad_y - abs_grad_x;
+
+	vector<Vec4i> lines;
+	HoughLinesP(temp, lines, 1, CV_PI / 900, 100, 750, 100);
+
+	if (lines.empty())
+		return;
+	double x = lines[0][0] - lines[0][2];
+	double y = lines[0][1] - lines[0][3];
+	double t = atan(y / x) / CV_PI * 180;
+
+	Point center = Point(tempa.cols / 2, tempa.rows / 2);
+	Mat rot_mat(2, 3, CV_32FC1);
+	Mat tempb;
+	rot_mat = getRotationMatrix2D(center, t, 1);
+	warpAffine(tempa, tempb, rot_mat, tempa.size());
+	//(112,0),(115,375)左
+	//(574,2),(580,372)右
+	//(103,1),(585,137)上(295,6),(342,138)，(344,4),(398,137)(289,5),(398,141)
+	//(103,1),(585,137)上
+	//(110,220),(581,356)下
+	//J = tempb.clone();
+	imshow("tempb", tempb);
+
+	Mat templ = imread("blockTemplate\\blocks.png");
+	if (templ.channels() != 1)
+		cvtColor(templ, templ, COLOR_BGR2GRAY);
+	if (tempb.channels() != 1)
+		cvtColor(tempb, tempb, COLOR_BGR2GRAY);
+	Mat res;
+	Point p;
+	double d;
+	UseMatchTemplate(tempb, templ, res, 0, d, p);
+
+	J = tempb(Rect(p, templ.size()));
+
+	Point centerb = Point(J.cols / 2, J.rows / 2);
+	Mat tempc;
+	rot_mat = getRotationMatrix2D(centerb, 180, 1);
+	warpAffine(J, tempc, rot_mat, J.size());
+
+	Rect rects[] = {Rect(12, 94, 94, 165), Rect(125, 2, 157, 140), Rect(299, 8, 39, 131), 
+		Rect(351, 8, 39, 131), Rect(406, 2, 157, 140), Rect(115, 138, 462, 82), 
+		Rect(11, 97, 94, 165), Rect(125, 4, 157, 140), Rect(300, 10, 39, 131), 
+		Rect(351, 10, 39, 131), Rect(406, 4, 157, 140) };
+	CString folder;
+	for (int i = 0; i < 12; i++)
+	{
+		folder.Format(_T("blocksImage\\%d\\%d.png"), offset, i);
+		Mat tmp;
+		if (i < 6)
+			tmp = J(rects[i]);
+		else if (i < 11)
+			tmp = tempc(rects[i]);
+		else
+			tmp = tempb;
+		imwrite(string(CW2A(folder.GetString())), tmp);
+	}
+}
+
+
+// 特征点检测
+void MyReduceImage::UseFeatureDetector(const Mat& I, Mat& J)
+{
+	Mat temp;
+	if (I.channels() == 3)
+		cvtColor(I, temp, COLOR_BGR2GRAY);
+	else
+		I.copyTo(temp);
+
+	Ptr<SURF> detector = SURF::create(400);
 }

@@ -71,14 +71,15 @@ private:
 	void ShowMethodThree();
 	// 隐藏图像求和法选项
 	void HideMethodThree();
+	std::string OpenDataTrainFile();
 	// 打开knn训练集
-	String OpenknnTrainFile();
+	std::string OpenknnTrainFile();
 public:
 	CEdit m_alpha_edit;
 	CStatic m_static_three;
 private:
 	// 打开图片
-	String OpenImageFile();
+	std::string OpenImageFile();
 public:
 	CStatic m_static_four_alpha;
 	CStatic m_static_four_beta;
@@ -257,4 +258,9 @@ private:
 	void ShowMethodThirtyFour();
 	// 隐藏SVM支持向量机算法
 	void HideMethodThirtyFour();
+public:
+	afx_msg void OnBnClickedButtonSave();
+private:
+	cv::Mat knnData;
+	cv::Mat knnLabels;
 };

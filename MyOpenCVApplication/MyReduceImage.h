@@ -50,7 +50,7 @@ private:
 	// 直方图计算
 	void UseCalcHist(const Mat& I, Mat& J, int hbins, int sbins);
 	// 寻找轮廓
-	void FindAllContours(const Mat& I, std::vector<std::vector<Point>>& contours, std::vector<Vec4i>& hierarchy, int thresh, bool cannyOrThresh);
+	void FindAllContours(const Mat& I, std::vector<std::vector<Point>>& contours, std::vector<Vec4i>& hierarchy, int thresh, bool cannyOrThresh, int method);
 	// 寻找凸包
 	void FindConvexHull(const std::vector<std::vector<Point>>& contours, std::vector<std::vector<Point>>& hull);
 	// 最小包覆正矩形
@@ -112,9 +112,9 @@ public:
 	// 反射投影
 	void UseCalcBackProject(const Mat& I, const Mat& J, Mat& K, int hbins, int sbins);
 	// 模板匹配方法
-	void UseMatchTemplate(const Mat& I, const Mat& templ, Mat& J, int method);
+	void UseMatchTemplate(const Mat& I, const Mat& templ, Mat& J, int method, double& value, Point& p);
 	// 绘画轮廓
-	void FindAndDrawContours(const Mat& I, Mat& J, int thresh);
+	void FindAndDrawContours(const Mat& I, Mat& J, int thresh, int method);
 	// 绘画凸包
 	void FindAndDrawConvexHull(const Mat& I, Mat& J, int thresh, bool is_draw_contours);
 	// 多边形拟合
@@ -154,8 +154,21 @@ public:
 	// knn算法
 	void UseknnTrain(const Mat& I);
 	// knn临近算法
-	void UseknnFindNearest(const Mat& I, cv::String filePath, float& r);
+	void UseknnFindNearest(const Mat& I, std::string filePath, float& r, std::vector<float>& results, std::vector<float>& neighborResponses, std::vector<float>& dist);
 	void UseSVMTrain(const Mat& I);
-	void UseSVMPredict(const Mat& I, cv::String filePath, float& r);
+	void UseSVMPredict(const Mat& I, std::string filePath, float& r);
+private:
+	void PrepareToTrain(const Mat& I, Mat& TrainData, Mat& Labels, int size);
+	bool readNumClassData(const std::string& filename, int var_count, Mat& _data, Mat& _responses);
+	Ptr<ml::TrainData> prepareTrainData(const Mat& data, const Mat& responses, int ntrain_samples);
+public:
+	void UseSVMTrain(const std::string data_filename);
+	// 拉普拉斯变换
+	void UseLaplacian(Mat& I, Mat& J, int aperture);
+	void findAllWord(const Mat& I, Mat& J, int offset, Mat& data, Mat& labels, std::vector<Rect>& rects);
+	// 端子检测
+	void UseBlocksChecker(const Mat& I, Mat& J, int offset);
+	// 特征点检测
+	void UseFeatureDetector(const Mat& I, Mat& J);
 };
 

@@ -6,6 +6,7 @@
 #include "MyOpenCVApplicationDlg.h"
 #include "afxdialogex.h"
 #include <opencv2/opencv.hpp> 
+#include <opencv2/highgui/highgui_c.h>
 #include "MyReduceImage.h"
 #include <sstream>
 #include "pylon/PylonIncludes.h"
@@ -20,6 +21,7 @@
 #endif
 
 using namespace cv;
+using namespace cv::ml;
 using namespace std;
 using namespace Pylon;
 using namespace GenApi;
@@ -129,6 +131,7 @@ BEGIN_MESSAGE_MAP(CMyOpenCVApplicationDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_CONFIG, &CMyOpenCVApplicationDlg::OnBnClickedButtonConfig)
 	ON_BN_CLICKED(IDC_BUTTON_OPEN_CAMERA, &CMyOpenCVApplicationDlg::OnBnClickedButtonOpenCamera)
 	ON_WM_DESTROY()
+	ON_BN_CLICKED(IDC_BUTTON_SAVE, &CMyOpenCVApplicationDlg::OnBnClickedButtonSave)
 END_MESSAGE_MAP()
 
 
@@ -200,7 +203,9 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(31, _T("basler相机"));
 	selectMethod.InsertString(32, _T("knn近邻算法"));
 	selectMethod.InsertString(33, _T("SVM支持向量机"));
-	selectMethod.InsertString(34, _T("不处理"));
+	selectMethod.InsertString(34, _T("拉普拉斯变换"));
+	selectMethod.InsertString(35, _T("特征点检测"));
+	selectMethod.InsertString(36, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -327,8 +332,8 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 	{
 		J = Mat::zeros(image_r.size(), image_r.type());
 		//第二图像路径
-		String imgFile = OpenImageFile();
-		Mat K = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+		string imgFile = OpenImageFile();
+		Mat K = imread(imgFile, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
 		if (K.size() != image_r.size()) {
 			MessageBox(_T("图片长宽不相等！不可叠加！"));
 			return;
@@ -362,7 +367,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 				return;
 			}
 			Mat temp;
-			cvtColor(image_r, temp, CV_RGB2GRAY);
+			cvtColor(image_r, temp, COLOR_RGB2GRAY);
 			reduceImage.UseDTF(temp, J);
 			break;
 		}
@@ -493,6 +498,9 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		m_num_edit.GetWindowTextW(str0);
 		double angle = _ttof(str0);
 		reduceImage.RotateImage(image_r, J, angle);
+		CString tt;
+		tt.Format(_T("i.rows:%d,i.cols:%d,j.rows:%d,j.cols:%d"), image_r.rows, image_r.cols, J.rows, J.cols);
+		MessageBox(tt);
 	}
 	break;
 	case 17:
@@ -509,8 +517,8 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 	case 19:
 	{
 		//第二图像路径
-		String imgFile = OpenImageFile();
-		J = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+		string imgFile = OpenImageFile();
+		J = imread(imgFile, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
 		if (!J.data)
 		{
 			MessageBox(_T("打开图片失败"));
@@ -525,8 +533,8 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 	case 20:
 	{
 		//第二图像路径
-		String imgFile = OpenImageFile();
-		Mat _J = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+		string imgFile = OpenImageFile();
+		Mat _J = imread(imgFile, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
 		if (!_J.data)
 		{
 			MessageBox(_T("打开图片失败"));
@@ -541,14 +549,27 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 	case 21:
 	{
 		//模板图像路径
-		String imgFile = OpenImageFile();
-		Mat templ = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+		string imgFile = OpenImageFile();
+		Mat templ = imread(imgFile, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
 		if (!templ.data)
 		{
 			MessageBox(_T("打开模板失败"));
 			return;
 		}
-		reduceImage.UseMatchTemplate(image_r, templ, J, method_one_selecter.GetCurSel());
+		if (image_r.channels() != 1)
+		{
+			cvtColor(image_r, image_r, COLOR_BGR2GRAY);
+		}
+		if (templ.channels() != 1)
+		{
+			cvtColor(templ, templ, COLOR_BGR2GRAY);
+		}
+		double value;
+		Point p;
+		reduceImage.UseMatchTemplate(image_r, templ, J, method_one_selecter.GetCurSel(), value, p);
+		CString valueStr;
+		valueStr.Format(_T("result point x:%d, y:%d"), p.x, p.y);
+		MessageBox(valueStr);
 	}
 	break;
 	case 22:
@@ -557,7 +578,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		m_num_edit.GetWindowTextW(str0);
 		int thresh = _ttoi(str0);
 		J = Mat::zeros(image_r.size(), CV_8UC3);
-		reduceImage.FindAndDrawContours(image_r, J, thresh);
+		reduceImage.FindAndDrawContours(image_r, J, thresh, method_one_selecter.GetCurSel());
 	}
 	break;
 	case 23:
@@ -627,6 +648,125 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 		case 0:
 			CodeJudgement(J);
 			break;
+		case 1:
+		{
+			vector<CString> vecFiles;
+			CString imgFile = PickImageFile();
+			if (imgFile.IsEmpty()) {
+				//MessageBox(_T(""));
+				return;
+			}
+			TraverseDir(imgFile, vecFiles);
+			//int len = vecFiles.size();
+			Mat data, labels;   //特征矩阵
+			vector<Rect> rects;
+			for (size_t i = 0; i < vecFiles.size(); i++)
+			{
+				Mat tempr = imread((LPCSTR)(CStringA)vecFiles[i], IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
+				Mat temprr;
+				reduceImage.RotateImage(tempr(Rect(1984, 448, 168, 385)), temprr, 90);
+
+				Mat tempe;
+				cvtColor(tempr(Rect(2114, 555, 20, 20)), tempe, COLOR_BGR2GRAY);
+
+				Point p;
+				double value;
+				Mat templ = imread("D:\\my_opencv_save_image.jpg", IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
+				imshow("testrr", temprr);
+				reduceImage.UseMatchTemplate(temprr, templ, J, 0, value, p);
+				imshow("test", temprr(Rect(p, templ.size())));
+				//MessageBox(_T("123"));
+				reduceImage.findAllWord(temprr(Rect(p, templ.size())), J, i, data, labels, rects);
+				data.push_back(tempe.reshape(0, 1));
+				labels.push_back((int)' ');
+			}
+			//(2114,555),(2125,568)
+			data.convertTo(data, CV_32FC1);
+			//Mat TData = data(Range(0, vecFiles.size() * 10), Range::all());
+			//Mat Labels = labels(Range(0, vecFiles.size() * 10), Range::all());
+			int K = 5;
+			Ptr<TrainData> tData = TrainData::create(data, ROW_SAMPLE, labels);
+			Ptr<KNearest> model = KNearest::create();
+			model->setDefaultK(K);
+			model->setIsClassifier(true);
+			model->train(tData);
+			model->save("versionKnn.xml");
+		}
+			break;
+		case 2:
+		{
+			if (!image_r.data)
+			{
+				MessageBox(_T("未打开图片"));
+				return;
+			}
+			CString labelstr = _T("R-4103968");
+			char* labelchar = "R-4103968";
+			CString strDir = PickImageFile();
+			if (strDir.IsEmpty()) {
+				//MessageBox(_T(""));
+				return;
+			}
+			if (strDir.Right(1) != "\\")
+				strDir += "\\";
+			int len = labelstr.GetLength();
+			vector<vector<CString>> vecFiles(len);
+			for (int i = 0; i < len; i++)
+			{
+				CString str = strDir + labelstr.Mid(i, 1);
+				MessageBox(str);
+				TraverseDir(str, vecFiles[i]);
+				/*for (size_t j = 0; j < vecFiles.size(); j++)
+				{
+					Mat charMat = imread((LPCSTR)(CStringA)vecFiles[i][j], CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+				}*/
+			}
+
+			Mat data, labels;   //特征矩阵
+			for (size_t i = 0; i < vecFiles[0].size(); i++)
+			{
+				for (int j = 0; j < len; j++)
+				{
+					Mat charMat = imread((LPCSTR)(CStringA)vecFiles[j][i], IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
+					Mat temp;
+					resize(charMat, temp, Size(20, 20));
+					data.push_back(temp.reshape(0, 1));
+					labels.push_back((int)labelchar[j]);
+				}
+				Mat tempe;
+				if (image_r.channels() == 3)
+					cvtColor(image_r(Rect(2114, 555, 20, 20)), tempe, COLOR_BGR2GRAY);
+				else
+					tempe = image_r(Rect(2114, 555, 20, 20));
+				//(2103,498),(2141,782)
+				data.push_back(tempe.reshape(0, 1));
+				labels.push_back((int)' ');
+			}
+			data.convertTo(data, CV_32FC1);
+			int K = 5;
+			Ptr<TrainData> tData = TrainData::create(data, ROW_SAMPLE, labels);
+			Ptr<KNearest> model = KNearest::create();
+			model->setDefaultK(K);
+			model->setIsClassifier(true);
+			model->train(tData);
+			model->save("versionKnn.xml");
+		}
+			break;
+		case 3:
+		{
+			vector<CString> vecFiles;
+			CString imgFile = PickImageFile();
+			if (imgFile.IsEmpty()) {
+				//MessageBox(_T(""));
+				return;
+			}
+			TraverseDir(imgFile, vecFiles);
+			for (size_t i = 0; i < vecFiles.size(); i++)
+			{
+				reduceImage.UseBlocksChecker(imread((LPCSTR)(CStringA)vecFiles[i], IMREAD_ANYDEPTH | IMREAD_ANYCOLOR), J, i);
+			}
+		}
+			break;
 		default:
 			break;
 		}
@@ -678,15 +818,72 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			break;
 		case 1:
 		{
-			String trainFile = OpenknnTrainFile();
+			string trainFile = OpenknnTrainFile();
 			if (trainFile == "no")
 				return;
 			float r;
 			image_r.copyTo(J);
-			reduceImage.UseknnFindNearest(J, trainFile, r);
+			//Mat results;
+			vector<float> results, neighborResponses, dist;
+			reduceImage.UseknnFindNearest(J, trainFile, r, results, neighborResponses, dist);
+			for (size_t i = 0; i < results.size(); i++)
+			{
+				CString re;
+				re.Format(_T("result %d: %f"), i, results[i]);
+				MessageBox(re);
+			}
+			for (size_t i = 0; i < neighborResponses.size(); i++)
+			{
+				CString re;
+				re.Format(_T("neighborResponses %d: %f"), i, neighborResponses[i]);
+				MessageBox(re);
+			}
+			for (size_t i = 0; i < dist.size(); i++)
+			{
+				CString re;
+				re.Format(_T("dist %d: %f"), i, dist[i]);
+				MessageBox(re);
+			}
+			//imshow("results", results);
+			//imshow("neighborResponses", neighborResponses);
+			//imshow("dist", dist);
 			CString msgRes;
 			msgRes.Format(_T("识别的数字为：%f"), r);
 			MessageBox(msgRes);
+		}
+			break;
+		case 2:
+		{
+			vector<CString> vecFiles;
+			CString imgFile = PickImageFile();
+			if (imgFile.IsEmpty()) {
+				//MessageBox(_T(""));
+				return;
+			}
+			TraverseDir(imgFile, vecFiles);
+			CString labelstr;
+			m_num_edit.GetWindowTextW(labelstr);
+			int label = _ttoi(labelstr);
+			for (size_t i = 0; i < vecFiles.size(); i++)
+			{
+				Mat temp = imread((LPCSTR)(CStringA)vecFiles[i]);
+				if (temp.channels() == 3)
+					cvtColor(temp, temp, COLOR_BGR2GRAY);
+				resize(temp, temp, Size(20, 20));
+				knnData.push_back(temp.reshape(0, 1));
+				knnLabels.push_back(label);
+			}
+			if (IDOK == MessageBox(_T("是否保存KNN学习数据？"), _T("提示！"), MB_ACTIVE))
+			{
+				knnData.convertTo(knnData, CV_32FC1);
+				int K = 5;
+				Ptr<TrainData> tData = TrainData::create(knnData, ROW_SAMPLE, knnLabels);
+				Ptr<KNearest> model = KNearest::create();
+				model->setDefaultK(K);
+				model->setIsClassifier(true);
+				model->train(tData);
+				model->save("knn.xml");
+			}
 		}
 			break;
 		default:
@@ -703,7 +900,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			break;
 		case 1:
 		{
-			String trainFile = OpenknnTrainFile();
+			string trainFile = OpenknnTrainFile();
 			if (trainFile == "no")
 				return;
 			float r;
@@ -714,10 +911,25 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			MessageBox(msgRes);
 		}
 			break;
+		case 2:
+		{
+			string dataFile = OpenDataTrainFile();
+			if (dataFile == "no")
+				return;
+			reduceImage.UseSVMTrain(dataFile);
+		}
+			break;
 		default:
 			break;
 		}
 	}
+		break;
+	case 34:
+	{
+		reduceImage.UseLaplacian(image_r, J, 5);
+	}
+		break;
+	case 35:
 		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
@@ -840,6 +1052,10 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		break;
 	case 33:
 		HideMethodThirtyFour();
+		break;
+	case 34:
+		break;
+	case 35:
 		break;
 	default:
 		break;
@@ -977,6 +1193,12 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		ShowMethodThirtyFour();
 		m_last_spin_num = 33;
 		break;
+	case 34:
+		m_last_spin_num = 34;
+		break;
+	case 35:
+		m_last_spin_num = 35;
+		break;
 	default:
 		break;
 	}
@@ -1009,7 +1231,7 @@ void CMyOpenCVApplicationDlg::HideMethodOne()
 void CMyOpenCVApplicationDlg::OnBnClickedButton1()
 {
 	//图像路径
-	String imgFile = OpenImageFile();
+	string imgFile = OpenImageFile();
 	if (imgFile == "no")
 	{
 		MessageBox(_T("打开图片失败"));
@@ -1017,7 +1239,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedButton1()
 	}
 	//读入图像
 	//image_r = imread(imgFile, CV_LOAD_IMAGE_GRAYSCALE);
-	image_r = imread(imgFile, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+	image_r = imread(imgFile, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
 
 	if (!image_r.data)
 	{
@@ -1072,8 +1294,29 @@ void CMyOpenCVApplicationDlg::HideMethodThree()
 	m_static_three.ShowWindow(SW_HIDE);
 }
 
+string CMyOpenCVApplicationDlg::OpenDataTrainFile()
+{
+	CFileDialog findFileDlg(
+		TRUE,  // TRUE是创建打开文件对话框，FALSE则创建的是保存文件对话框
+		_T(".data"),  // 默认的打开文件的类型
+		NULL,  // 默认打开的文件名
+		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,  // 打开只读文件
+		_T("knnXML(*.data)|*.data|")  // 所有可以打开的文件类型
+	);
+	//图像名称
+	string imgFile;
+	if (IDOK == findFileDlg.DoModal())
+	{
+		imgFile = (LPCSTR)(CStringA)(findFileDlg.GetPathName());
+	}
+	else
+	{
+		imgFile = "no";
+	}
+	return imgFile;
+}
 
-String CMyOpenCVApplicationDlg::OpenknnTrainFile()
+string CMyOpenCVApplicationDlg::OpenknnTrainFile()
 {
 	CFileDialog findFileDlg(
 		TRUE,  // TRUE是创建打开文件对话框，FALSE则创建的是保存文件对话框
@@ -1083,7 +1326,7 @@ String CMyOpenCVApplicationDlg::OpenknnTrainFile()
 		_T("knnXML(*.xml)|*.xml|所有文件 (*.*)|*.*||")  // 所有可以打开的文件类型
 	);
 	//图像名称
-	String imgFile;
+	string imgFile;
 	if (IDOK == findFileDlg.DoModal())
 	{
 		imgFile = (LPCSTR)(CStringA)(findFileDlg.GetPathName());
@@ -1096,7 +1339,7 @@ String CMyOpenCVApplicationDlg::OpenknnTrainFile()
 }
 
 // 打开图片
-String CMyOpenCVApplicationDlg::OpenImageFile()
+string CMyOpenCVApplicationDlg::OpenImageFile()
 {
 	CFileDialog findFileDlg(
 		TRUE,  // TRUE是创建打开文件对话框，FALSE则创建的是保存文件对话框
@@ -1106,7 +1349,7 @@ String CMyOpenCVApplicationDlg::OpenImageFile()
 		_T("jpg图片(*.jpg)|*.jpg|png图片(*.PNG)|*.PNG|所有文件 (*.*)|*.*||")  // 所有可以打开的文件类型
 	);
 	//图像名称
-	String imgFile;
+	string imgFile;
 	if (IDOK == findFileDlg.DoModal())
 	{
 		imgFile = (LPCSTR)(CStringA)(findFileDlg.GetPathName());
@@ -1228,6 +1471,7 @@ void CMyOpenCVApplicationDlg::ShowMethodTen()
 	method_one_selecter.InsertString(2, _T("截断阈值"));
 	method_one_selecter.InsertString(3, _T("0阈值"));
 	method_one_selecter.InsertString(4, _T("反0阈值"));
+	method_one_selecter.InsertString(5, _T("自适应阈值"));
 	method_one_selecter.SetCurSel(0);
 }
 
@@ -1272,7 +1516,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedButton2()
 		MessageBox(_T("该图像是灰度图像！"));
 		return;
 	}
-	cvtColor(image_r, image_r, CV_RGB2GRAY);
+	cvtColor(image_r, image_r, COLOR_RGB2GRAY);
 	imshow(readWindowName, image_r);
 }
 
@@ -1350,11 +1594,11 @@ void CMyOpenCVApplicationDlg::HideMethodFourteen()
 void on_mouse(int event, int x, int y, int flags, void *ustc)
 {
 	//CMyOpenCVApplicationDlg *pWnd = (CMyOpenCVApplicationDlg *)CWnd::FromHandle(hWnd);
-	if (event == CV_EVENT_LBUTTONDOWN)//左键按下，读取初始坐标
+	if (event == EVENT_LBUTTONDOWN)//左键按下，读取初始坐标
 	{
 		thisDlg->SetSPt(x, y);
 	}
-	if (event == CV_EVENT_MOUSEMOVE && (flags & CV_EVENT_FLAG_LBUTTON))
+	if (event == EVENT_MOUSEMOVE && (flags & EVENT_FLAG_LBUTTON))
 	{
 		if (x != thisDlg->GetSPt().x && y != thisDlg->GetSPt().y)
 		{
@@ -1362,7 +1606,7 @@ void on_mouse(int event, int x, int y, int flags, void *ustc)
 			thisDlg->DrawRectangle();
 		}
 	}
-	if (event == CV_EVENT_LBUTTONUP)
+	if (event == EVENT_LBUTTONUP)
 	{
 		if (x != thisDlg->GetSPt().x && y != thisDlg->GetSPt().y)
 		{
@@ -1588,12 +1832,12 @@ void CMyOpenCVApplicationDlg::OnBnClickedMultipleBlend()
 	TraverseDir(imgFile, vecFiles);
 	int len = vecFiles.size();
 	double skip_num = 0.0;
-	Mat I = imread((LPCSTR)(CStringA)vecFiles.at(0), CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+	Mat I = imread((LPCSTR)(CStringA)vecFiles[0], IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
 	Mat J;
 	for (int i = 1; i < len; i++)
 	{
 		double alpha = 1.0 / (i + 1.0 - skip_num);
-		Mat next = imread((LPCSTR)(CStringA)vecFiles.at(i), CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+		Mat next = imread((LPCSTR)(CStringA)vecFiles[i], IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
 		if (I.size() != next.size())
 		{
 			skip_num += 1.0;
@@ -1629,7 +1873,7 @@ void CMyOpenCVApplicationDlg::TraverseDir(CString& strDir, vector<CString>& vecF
 	//在路径后面添加\*.*后缀
 	if (strDir.Right(1) != "\\")
 		strDir += "\\";
-	strDir += "*.jpg";
+	strDir += "*.*";
 	BOOL ret = ff.FindFile(strDir);
 	while (ret)
 	{
@@ -1648,7 +1892,7 @@ void CMyOpenCVApplicationDlg::TraverseDir(CString& strDir, vector<CString>& vecF
 		}
 
 	}
-
+	ff.Close();
 }
 
 // 展示寻找轮廓方法
@@ -1656,6 +1900,10 @@ void CMyOpenCVApplicationDlg::ShowMethodTwentyThree()
 {
 	m_num_edit.ShowWindow(SW_SHOW);
 	m_spin_one.ShowWindow(SW_SHOW);
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.InsertString(0, _T("全部轮廓"));
+	method_one_selecter.InsertString(1, _T("最外层轮廓"));
+	method_one_selecter.SetCurSel(0);
 }
 
 // 隐藏寻找轮廓方法
@@ -1663,6 +1911,8 @@ void CMyOpenCVApplicationDlg::HideMethodTwentyThree()
 {
 	m_num_edit.ShowWindow(SW_HIDE);
 	m_spin_one.ShowWindow(SW_HIDE);
+	method_one_selecter.ShowWindow(SW_HIDE);
+	method_one_selecter.ResetContent();
 }
 
 // 展示寻找凸包方法
@@ -1784,6 +2034,9 @@ void CMyOpenCVApplicationDlg::ShowMethodTwentyNine()
 	m_config_bt.ShowWindow(SW_SHOW);
 	method_one_selecter.ShowWindow(SW_SHOW);
 	method_one_selecter.InsertString(0, _T("二维码判定"));
+	method_one_selecter.InsertString(1, _T("字符抓取"));
+	method_one_selecter.InsertString(2, _T("字符学习"));
+	method_one_selecter.InsertString(3, _T("端子检测"));
 	method_one_selecter.SetCurSel(0);
 }
 
@@ -1890,7 +2143,7 @@ void CMyOpenCVApplicationDlg::CodeJudgement(Mat& J)
 
 	J = image_r.clone();
 	if (J.channels() == 1)
-		cvtColor(J, J, CV_GRAY2BGR);
+		cvtColor(J, J, COLOR_GRAY2BGR);
 	RotatedRect rotatedRect;
 	Mat code(image_r, projectConfig.rect);
 	Mat temp = code.clone();
@@ -2310,15 +2563,20 @@ double CMyOpenCVApplicationDlg::GetTheta(Point p1, Point p2, Point p3, Point p4)
 // 展示knn算法选项
 void CMyOpenCVApplicationDlg::ShowMethodThirtyThree()
 {
+	m_num_edit.ShowWindow(SW_SHOW);
 	method_one_selecter.ShowWindow(SW_SHOW);
 	method_one_selecter.InsertString(0, _T("训练数据并保存"));
 	method_one_selecter.InsertString(1, _T("识别图像"));
+	method_one_selecter.InsertString(2, _T("训练数据(2)"));
 	method_one_selecter.SetCurSel(0);
 }
 
 // 隐藏knn算法选项
 void CMyOpenCVApplicationDlg::HideMethodThirtyThree()
 {
+	knnData = Mat();
+	knnLabels = Mat();
+	m_num_edit.ShowWindow(SW_HIDE);
 	method_one_selecter.ShowWindow(SW_HIDE);
 	method_one_selecter.ResetContent();
 }
@@ -2330,6 +2588,7 @@ void CMyOpenCVApplicationDlg::ShowMethodThirtyFour()
 	method_one_selecter.ShowWindow(SW_SHOW);
 	method_one_selecter.InsertString(0, _T("训练数据并保存"));
 	method_one_selecter.InsertString(1, _T("识别图像"));
+	method_one_selecter.InsertString(2, _T("训练字母库"));
 	method_one_selecter.SetCurSel(0);
 }
 
@@ -2339,4 +2598,31 @@ void CMyOpenCVApplicationDlg::HideMethodThirtyFour()
 {
 	method_one_selecter.ShowWindow(SW_HIDE);
 	method_one_selecter.ResetContent();
+}
+
+
+void CMyOpenCVApplicationDlg::OnBnClickedButtonSave()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	if (!image_r.data)
+	{
+		MessageBox(_T("没有图像"));
+		return;
+	}
+	CFileDialog saveFileDlg(
+		FALSE,  // TRUE是创建打开文件对话框，FALSE则创建的是保存文件对话框
+		NULL,  // 默认的打开文件的类型
+		_T("my_opencv_save_image"),  // 默认打开的文件名
+		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,  // 打开只读文件
+		_T("jpg图片(*.jpg)|*.jpg|png图片(*.PNG)|*.PNG||")  // 所有可以打开的文件类型
+	);
+	if (IDOK == saveFileDlg.DoModal())
+	{
+		CString savePath = saveFileDlg.GetPathName();
+		if (saveFileDlg.m_ofn.nFilterIndex == 1)
+			savePath += _T(".jpg");
+		if (saveFileDlg.m_ofn.nFilterIndex == 2)
+			savePath += _T(".png");
+		imwrite(string(CW2A(savePath.GetString())), image_r);
+	}
 }
