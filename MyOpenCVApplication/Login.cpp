@@ -41,7 +41,7 @@ void CLogin::OnBnClickedOk()
 	CString acc,psw;
 	GetDlgItem(IDC_ACCOUNT)->GetWindowText(acc);
 	GetDlgItem(IDC_PASSWORD)->GetWindowText(psw);
-	if (acc == "debug" && psw == "9999") {
+	if (acc == _T("debug") && psw == _T("9999")) {
 		CDialogEx::OnOK();
 	}
 	else {

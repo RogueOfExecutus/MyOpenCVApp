@@ -559,9 +559,10 @@ void MyReduceImage::RotateImage(const Mat& I, Mat& J, double angle)
 				}
 				if (c == 3)
 				{
-					J.at<Vec3b>(i, J.cols - j - 1)[0] = I.at<Vec3b>(j, i)[0];
+					J.at<Vec3b>(i, J.cols - j - 1) = I.at<Vec3b>(j, i);
+					/*J.at<Vec3b>(i, J.cols - j - 1)[0] = I.at<Vec3b>(j, i)[0];
 					J.at<Vec3b>(i, J.cols - j - 1)[1] = I.at<Vec3b>(j, i)[1];
-					J.at<Vec3b>(i, J.cols - j - 1)[2] = I.at<Vec3b>(j, i)[2];
+					J.at<Vec3b>(i, J.cols - j - 1)[2] = I.at<Vec3b>(j, i)[2];*/
 				}
 			}
 		}
@@ -1800,13 +1801,266 @@ void MyReduceImage::UseBlocksChecker(const Mat& I, Mat& J, int offset)
 
 
 // 特征点检测
-void MyReduceImage::UseFeatureDetector(const Mat& I, Mat& J)
+void MyReduceImage::UseFeatureDetector(const Mat& I, Mat& K, Mat& J, int method)
 {
-	Mat temp;
+	Mat img1, img2;
 	if (I.channels() == 3)
-		cvtColor(I, temp, COLOR_BGR2GRAY);
+		cvtColor(I, img1, COLOR_BGR2GRAY);
 	else
-		I.copyTo(temp);
+		I.copyTo(img1);
 
-	Ptr<SURF> detector = SURF::create(400);
+	if (K.channels() == 3)
+		cvtColor(K, img2, COLOR_BGR2GRAY);
+	else
+		K.copyTo(img2);
+
+	/*int minHessian = 700;
+	Ptr<SURF> surf = SURF::create(minHessian);
+	vector<KeyPoint> keypoints;
+	Mat descriptors;
+	surf->detectAndCompute(img1, Mat(), keypoints, descriptors);
+
+	drawKeypoints(img1, keypoints, J, Scalar::all(-1), DrawMatchesFlags::DEFAULT);*/
+
+	// SURF 特征检测与匹配
+	
+	int minHessian = 1000;
+	Ptr<SURF> detector = SURF::create(minHessian);
+	//Ptr<DescriptorExtractor> descriptor = SURF::create();
+	Ptr<DescriptorMatcher> matcher1;
+	if(method == 0 || method == 2)
+		matcher1 = DescriptorMatcher::create("BruteForce");
+	else if(method == 1)
+		matcher1 = DescriptorMatcher::create("FlannBased");
+	//    BFMatcher matcher1(NORM_L2);
+
+	vector<KeyPoint> keyPoint1, keyPoint2;
+	Mat descriptors1, descriptors2;
+	vector<DMatch> matches;
+
+	//// 检测特征点
+	detector->detectAndCompute(img1, Mat(), keyPoint1, descriptors1);
+	detector->detectAndCompute(img2, Mat(), keyPoint2, descriptors2);
+	//detector->detect(img1, keyPoint1);
+	//detector->detect(img2, keyPoint2);
+	//// 提取特征点描述子
+	//descriptor->compute(img1, keyPoint1, descriptors1);
+	//descriptor->compute(img2, keyPoint2, descriptors2);
+	//// 匹配图像中的描述子
+	matcher1->match(descriptors1, descriptors2, matches);
+
+	vector< DMatch > good_matches;
+
+	if (method == 1 || method == 2)
+	{
+		double max_dist = 0; double min_dist = 100;
+
+		//-- Quick calculation of max and min distances between keypoints
+		for (int i = 0; i < descriptors1.rows; i++)
+		{
+			double dist = matches[i].distance;
+			if (dist == 0.0)
+				continue;
+			if (dist < min_dist) min_dist = dist;
+			if (dist > max_dist) max_dist = dist;
+		}
+		for (int i = 0; i < descriptors1.rows; i++)
+		{
+			if (matches[i].distance < 2 * min_dist)
+			{
+				good_matches.push_back(matches[i]);
+			}
+		}
+	}
+
+	Mat img_keyPoint1, img_keyPoint2;
+	drawKeypoints(img1, keyPoint1, img_keyPoint1, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+	imshow("keyPoint1 SURF", img_keyPoint1);
+	drawKeypoints(img2, keyPoint2, img_keyPoint2, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+	imshow("keyPoint2 SURF", img_keyPoint2);
+
+	Mat img_matches;
+	drawMatches(img1, keyPoint1, img2, keyPoint2, method ? good_matches : matches, img_matches,
+		Scalar::all(-1), Scalar::all(-1),vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+
+	if (method == 2)
+	{
+		vector<Point2f> obj;
+		vector<Point2f> scene;
+
+		for (int i = 0; i < good_matches.size(); i++)
+		{
+			//-- Get the keypoints from the good matches
+			obj.push_back(keyPoint1[good_matches[i].queryIdx].pt);
+			scene.push_back(keyPoint2[good_matches[i].trainIdx].pt);
+		}
+
+		Mat H = findHomography(scene, obj, FM_RANSAC);
+
+		//-- Get the corners from the image_1 ( the object to be "detected" )
+		vector<Point2f> obj_corners(4);
+		obj_corners[0] = Point(0, 0);
+		obj_corners[1] = Point(img2.cols - 1, 0);
+		obj_corners[2] = Point(img2.cols - 1, img2.rows - 1); 
+		obj_corners[3] = Point(0, img2.rows - 1);
+		vector<Point2f> scene_corners(4);
+
+		perspectiveTransform(obj_corners, scene_corners, H);
+
+		//-- Draw lines between the corners (the mapped object in the scene - image_2 )
+		line(img_matches, scene_corners[0], scene_corners[1], Scalar(0, 255, 0), 4);
+		line(img_matches, scene_corners[1], scene_corners[2], Scalar(0, 255, 0), 4);
+		line(img_matches, scene_corners[2], scene_corners[3], Scalar(0, 255, 0), 4);
+		line(img_matches, scene_corners[3], scene_corners[0], Scalar(0, 255, 0), 4);
+	}
+
+	imshow("img_matches", img_matches);
+	J = img_matches;
+}
+
+
+// 透视变换
+void MyReduceImage::UsePerspectiveTransform(const Mat& I, Mat& J, double& t)
+{
+	int img_height = I.rows;
+	int img_width = I.cols;
+	vector<Point2f> corners(4);
+	corners[0] = Point2f(0, 0);
+	corners[1] = Point2f(img_width - 1, 0);
+	corners[2] = Point2f(0, img_height - 1);
+	corners[3] = Point2f(img_width - 1, img_height - 1);
+	vector<Point2f> corners_trans(4);
+	corners_trans[0] = Point2f(0.15*img_width, 0.1*img_height);
+	corners_trans[1] = Point2f(0.95*img_width, 0);
+	corners_trans[2] = Point2f(0, img_height - 1);
+	corners_trans[3] = Point2f(0.9*img_width, img_height - 1);
+
+	Mat transform = getPerspectiveTransform(corners, corners_trans);
+	Mat temp;
+	warpPerspective(I, temp, transform, I.size());
+	imshow("warpPerspective", temp);
+	cout << transform << endl;
+	vector<Point2f> ponits, points_trans;
+	for (int i = 0; i<img_height; i++) {
+		for (int j = 0; j<img_width; j++) {
+			ponits.push_back(Point2f(j, i));
+		}
+	}
+
+	perspectiveTransform(ponits, points_trans, transform);
+	int c = I.channels();
+	J = Mat::zeros(img_height, img_width, I.type());
+
+	//计时
+	t = (double)getTickCount();
+	int count = 0;
+	for (int i = 0; i<img_height; i++) 
+	{
+		const uchar* p = I.ptr<uchar>(i);
+		for (int j = 0; j<img_width; j++)
+		{
+			int y = points_trans[count].y;
+			int x = points_trans[count].x;
+			if (x >= img_width || y >= img_height || x < 0 || y < 0)
+				continue;
+			uchar* t = J.ptr<uchar>(y);
+			if (c == 1)
+				t[x] = p[j];
+			else if (c == 3)
+			{
+				//J.at<Vec3b>(y, x) = I.at<Vec3b>(i, j);
+				//速度最快
+				t[x * 3] = p[j * 3];
+				t[x * 3 + 1] = p[j * 3 + 1];
+				t[x * 3 + 2] = p[j * 3 + 2];
+			}
+			count++;
+		}
+	}
+
+	/*const uchar* p = I.data;
+	uchar* r = J.data;
+	for (size_t i = 0; i < points_trans.size(); i++)
+	{
+		int y = points_trans[i].y;
+		int x = points_trans[i].x;
+		//if (x >= img_width || y >= img_height || x < 0 || y < 0)
+			//continue;
+		//int a = i / img_width;
+		//int b = i%img_width;
+		if (c == 1)
+			//J.at<uchar>(y, x) = I.at<uchar>(a, b);
+			r[x + y*J.cols] = p[i];
+		else if (c == 3)
+		{
+			//J.at<Vec3b>(y, x) = I.at<Vec3b>(a, b);
+			//速度较慢，因要计算x + y*J.cols，整体慢了1/4左右
+			r[(x + y*J.cols) * 3] = p[i * 3];
+			r[(x + y*J.cols) * 3 + 1] = p[i * 3 + 1];
+			r[(x + y*J.cols) * 3 + 2] = p[i * 3 + 2];
+		}
+	}*/
+
+	t = ((double)getTickCount() - t) / getTickFrequency();
+}
+
+
+void MyReduceImage::UseBlocksChecker2(const Mat& I, Mat& J, Mat& templ)
+{
+	I.copyTo(J);
+	Mat src;
+	if (I.channels() == 3)
+		cvtColor(I, src, COLOR_BGR2GRAY);
+	else
+		I.copyTo(src);
+
+	if (templ.channels() == 3)
+		cvtColor(templ, templ, COLOR_BGR2GRAY);
+	Mat templ1 = templ(Rect(0, 0, templ.cols / 2, templ.rows / 2));
+	Mat templ2 = templ(Rect(templ.cols / 2, 0, templ.cols / 2, templ.rows / 2));
+	Mat templ3 = templ(Rect(0, templ.rows / 2, templ.cols / 2, templ.rows / 2));
+	Mat templ4 = templ(Rect(templ.cols / 2, templ.rows / 2, templ.cols / 2, templ.rows / 2));
+
+	Mat result1, result2, result3, result4, result5;
+	int result_cols = I.cols - templ1.cols + 2;
+	int result_rows = I.rows - templ1.rows + 2;
+
+	result1.create(result_cols, result_rows, CV_32FC1);
+	result2.create(result_cols, result_rows, CV_32FC1);
+	result3.create(result_cols, result_rows, CV_32FC1);
+	result4.create(result_cols, result_rows, CV_32FC1);
+
+	matchTemplate(src, templ1, result1, TM_SQDIFF);
+	matchTemplate(src, templ2, result2, TM_SQDIFF);
+	matchTemplate(src, templ3, result3, TM_SQDIFF);
+	matchTemplate(src, templ4, result4, TM_SQDIFF);
+
+	vector<Point> minLoc(4);
+	minMaxLoc(result1, 0, 0, &minLoc[0]);
+	minMaxLoc(result2, 0, 0, &minLoc[1]);
+	minMaxLoc(result3, 0, 0, &minLoc[2]);
+	minMaxLoc(result4, 0, 0, &minLoc[3]);
+
+
+	vector<Point> corners(4);
+	corners[0] = Point(100, 100);
+	corners[1] = Point(templ.cols / 2+100, 100);
+	corners[2] = Point(100, templ.rows / 2+100);
+	corners[3] = Point(templ.cols / 2+100, templ.rows / 2+100);
+
+	Mat H = findHomography(minLoc, corners, FM_RANSAC);
+	Mat temp;
+	warpPerspective(src, temp, H, I.size());
+
+	result5.create(I.cols - templ.cols + 1, I.rows - templ.rows + 1, CV_32FC1);
+
+	matchTemplate(temp, templ, result5, TM_SQDIFF);
+	Point minLoc5;
+	minMaxLoc(result5, 0, 0, &minLoc5);
+	Mat post = temp(Rect(minLoc5, templ.size()));
+	J = post;
+	/*rectangle(J, minLoc[0], Point(minLoc[0].x + templ.cols / 2, minLoc[0].y + templ.rows / 2), Scalar::all(255), 5);
+	rectangle(J, minLoc[1], Point(minLoc[1].x + templ.cols / 2, minLoc[1].y + templ.rows / 2), Scalar::all(255), 5);
+	rectangle(J, minLoc[2], Point(minLoc[2].x + templ.cols / 2, minLoc[2].y + templ.rows / 2), Scalar::all(255), 5);
+	rectangle(J, minLoc[3], Point(minLoc[3].x + templ.cols / 2, minLoc[3].y + templ.rows / 2), Scalar::all(255), 5);*/
 }

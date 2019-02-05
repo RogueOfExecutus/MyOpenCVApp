@@ -78,7 +78,4 @@
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>
-  <ItemGroup>
-    <Library Include="..\..\..\ZXingWin64\zxing-cpp-master\build\Debug\libzxing-debug.lib" />
-  </ItemGroup>
 </Project>

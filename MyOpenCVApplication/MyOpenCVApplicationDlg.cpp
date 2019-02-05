@@ -5,15 +5,14 @@
 #include "MyOpenCVApplication.h"
 #include "MyOpenCVApplicationDlg.h"
 #include "afxdialogex.h"
-#include <opencv2/opencv.hpp> 
-#include <opencv2/highgui/highgui_c.h>
+#include <opencv2/opencv.hpp>
+#include "opencv2/highgui/highgui_c.h"
 #include "MyReduceImage.h"
 #include <sstream>
 #include "pylon/PylonIncludes.h"
 #include <condition_variable>
 #include <thread>
 #include <mutex>
-#include <condition_variable>
 #include <cstdlib>
 
 #ifdef _DEBUG
@@ -205,7 +204,8 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	selectMethod.InsertString(33, _T("SVM支持向量机"));
 	selectMethod.InsertString(34, _T("拉普拉斯变换"));
 	selectMethod.InsertString(35, _T("特征点检测"));
-	selectMethod.InsertString(36, _T("不处理"));
+	selectMethod.InsertString(36, _T("透视变换"));
+	selectMethod.InsertString(37, _T("不处理"));
 	selectMethod.SetCurSel(0);
 	method_one_selecter.InsertString(0, _T("颜色缩减法"));
 	method_one_selecter.InsertString(1, _T("The iterator (safe) method"));
@@ -213,7 +213,6 @@ BOOL CMyOpenCVApplicationDlg::OnInitDialog()
 	m_spin_one.SetRange32(0, 255);//表示数值只能在0到255内变化
 	m_spin_one.SetBase(10);//设置进制数,只能是10进制和16进制
 	m_num_edit.SetWindowText(_T("8"));
-
 	thisDlg = this;
 	//创建源图片窗口
 	namedWindow(readWindowName, WINDOW_NORMAL);
@@ -662,7 +661,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			vector<Rect> rects;
 			for (size_t i = 0; i < vecFiles.size(); i++)
 			{
-				Mat tempr = imread((LPCSTR)(CStringA)vecFiles[i], IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
+				Mat tempr = imread(string(CW2A(vecFiles[i])), IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
 				Mat temprr;
 				reduceImage.RotateImage(tempr(Rect(1984, 448, 168, 385)), temprr, 90);
 
@@ -718,7 +717,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 				TraverseDir(str, vecFiles[i]);
 				/*for (size_t j = 0; j < vecFiles.size(); j++)
 				{
-					Mat charMat = imread((LPCSTR)(CStringA)vecFiles[i][j], CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+					Mat charMat = imread(string(CW2A(vecFiles[i][j])), CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
 				}*/
 			}
 
@@ -727,7 +726,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			{
 				for (int j = 0; j < len; j++)
 				{
-					Mat charMat = imread((LPCSTR)(CStringA)vecFiles[j][i], IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
+					Mat charMat = imread(string(CW2A(vecFiles[j][i])), IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
 					Mat temp;
 					resize(charMat, temp, Size(20, 20));
 					data.push_back(temp.reshape(0, 1));
@@ -763,7 +762,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			TraverseDir(imgFile, vecFiles);
 			for (size_t i = 0; i < vecFiles.size(); i++)
 			{
-				reduceImage.UseBlocksChecker(imread((LPCSTR)(CStringA)vecFiles[i], IMREAD_ANYDEPTH | IMREAD_ANYCOLOR), J, i);
+				reduceImage.UseBlocksChecker(imread(string(CW2A(vecFiles[i])), IMREAD_ANYDEPTH | IMREAD_ANYCOLOR), J, i);
 			}
 		}
 			break;
@@ -866,7 +865,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 			int label = _ttoi(labelstr);
 			for (size_t i = 0; i < vecFiles.size(); i++)
 			{
-				Mat temp = imread((LPCSTR)(CStringA)vecFiles[i]);
+				Mat temp = imread(string(CW2A(vecFiles[i])));
 				if (temp.channels() == 3)
 					cvtColor(temp, temp, COLOR_BGR2GRAY);
 				resize(temp, temp, Size(20, 20));
@@ -930,6 +929,32 @@ void CMyOpenCVApplicationDlg::OnBnClickedOk()
 	}
 		break;
 	case 35:
+	{
+		string imgFile = OpenImageFile();
+		Mat templ = imread(imgFile, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
+		if (!templ.data)
+		{
+			MessageBox(_T("打开图片失败"));
+			return;
+		}
+		//reduceImage.UseFeatureDetector(image_r, templ, J, method_one_selecter.GetCurSel());
+		Mat input = image_r(Rect(61, 1060, 1394, 1178)).clone();
+		double t = (double)getTickCount();
+		reduceImage.UseBlocksChecker2(input, J, templ);
+		t = ((double)getTickCount() - t) / getTickFrequency();
+		CString tempTime;
+		tempTime.Format(_T("耗时%lf秒"), t);
+		MessageBox(tempTime);
+	}
+		break;
+	case 36:
+	{
+		double t;
+		reduceImage.UsePerspectiveTransform(image_r, J, t);
+		CString timeStr;
+		timeStr.Format(_T("耗时%lf"), t);
+		MessageBox(timeStr);
+	}
 		break;
 	default:
 		MessageBox(_T("没有选择图像处理方法！"));
@@ -1056,6 +1081,9 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 	case 34:
 		break;
 	case 35:
+		HideMethodThirtySix();
+		break;
+	case 36:
 		break;
 	default:
 		break;
@@ -1197,7 +1225,11 @@ void CMyOpenCVApplicationDlg::OnCbnSelchangeComboMethod()
 		m_last_spin_num = 34;
 		break;
 	case 35:
+		ShowMethodThirtySix();
 		m_last_spin_num = 35;
+		break;
+	case 36:
+		m_last_spin_num = 36;
 		break;
 	default:
 		break;
@@ -1234,7 +1266,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedButton1()
 	string imgFile = OpenImageFile();
 	if (imgFile == "no")
 	{
-		MessageBox(_T("打开图片失败"));
+		MessageBox(_T("打开图片失败1"));
 		return;
 	}
 	//读入图像
@@ -1243,7 +1275,7 @@ void CMyOpenCVApplicationDlg::OnBnClickedButton1()
 
 	if (!image_r.data)
 	{
-		MessageBox(_T("打开图片失败"));
+		MessageBox(_T("打开图片失败2"));
 		return;
 	}
 	else
@@ -1307,7 +1339,7 @@ string CMyOpenCVApplicationDlg::OpenDataTrainFile()
 	string imgFile;
 	if (IDOK == findFileDlg.DoModal())
 	{
-		imgFile = (LPCSTR)(CStringA)(findFileDlg.GetPathName());
+		imgFile = string(CW2A(findFileDlg.GetPathName()));
 	}
 	else
 	{
@@ -1329,7 +1361,7 @@ string CMyOpenCVApplicationDlg::OpenknnTrainFile()
 	string imgFile;
 	if (IDOK == findFileDlg.DoModal())
 	{
-		imgFile = (LPCSTR)(CStringA)(findFileDlg.GetPathName());
+		imgFile = string(CW2A(findFileDlg.GetPathName()));
 	}
 	else
 	{
@@ -1352,7 +1384,7 @@ string CMyOpenCVApplicationDlg::OpenImageFile()
 	string imgFile;
 	if (IDOK == findFileDlg.DoModal())
 	{
-		imgFile = (LPCSTR)(CStringA)(findFileDlg.GetPathName());
+		imgFile = string(CW2A(findFileDlg.GetPathName()));
 	}
 	else
 	{
@@ -1832,12 +1864,12 @@ void CMyOpenCVApplicationDlg::OnBnClickedMultipleBlend()
 	TraverseDir(imgFile, vecFiles);
 	int len = vecFiles.size();
 	double skip_num = 0.0;
-	Mat I = imread((LPCSTR)(CStringA)vecFiles[0], IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
+	Mat I = imread(string(CW2A(vecFiles[0])), IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
 	Mat J;
 	for (int i = 1; i < len; i++)
 	{
 		double alpha = 1.0 / (i + 1.0 - skip_num);
-		Mat next = imread((LPCSTR)(CStringA)vecFiles[i], IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
+		Mat next = imread(string(CW2A(vecFiles[i])), IMREAD_ANYDEPTH | IMREAD_ANYCOLOR);
 		if (I.size() != next.size())
 		{
 			skip_num += 1.0;
@@ -2481,7 +2513,7 @@ void CMyOpenCVApplicationDlg::ThreadCamera()
 								formatConverter.Convert(pylonImage, ptrGrabResult);
 
 								// 将 pylon image转成OpenCV image.
-								image_r = cv::Mat(ptrGrabResult->GetHeight(), ptrGrabResult->GetWidth(), CV_8UC3, (uint8_t *)pylonImage.GetBuffer());
+								//image_r = Mat(ptrGrabResult->GetHeight(), ptrGrabResult->GetWidth(), CV_8UC3, (uint8_t *)pylonImage.GetBuffer());
 
 							}
 						}
@@ -2625,4 +2657,23 @@ void CMyOpenCVApplicationDlg::OnBnClickedButtonSave()
 			savePath += _T(".png");
 		imwrite(string(CW2A(savePath.GetString())), image_r);
 	}
+}
+
+
+// 特征框架
+void CMyOpenCVApplicationDlg::ShowMethodThirtySix()
+{
+	method_one_selecter.ShowWindow(SW_SHOW);
+	method_one_selecter.InsertString(0, _T("Brute Force"));
+	method_one_selecter.InsertString(1, _T("FLANN based"));
+	method_one_selecter.InsertString(2, _T("寻找图片"));
+	method_one_selecter.SetCurSel(0);
+}
+
+
+// 特征框架
+void CMyOpenCVApplicationDlg::HideMethodThirtySix()
+{
+	method_one_selecter.ShowWindow(SW_HIDE);
+	method_one_selecter.ResetContent();
 }

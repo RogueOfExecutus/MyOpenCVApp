@@ -79,15 +79,17 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Program Files\Basler\pylon 4\pylon\include;C:\Program Files\Basler\pylon 4\genicam\library\cpp\include;D:\ZXingWin64\zxing-cpp-master\core\src;$(IncludePath)</IncludePath>
+    <IncludePath>D:\opencv\include;C:\Program Files\Basler\pylon 4\pylon\include;C:\Program Files\Basler\pylon 4\genicam\library\cpp\include;D:\ZXingWin64\zxing-cpp-master\core\src;$(IncludePath)</IncludePath>
     <SourcePath>$(SourcePath)</SourcePath>
-    <LibraryPath>C:\Program Files\Basler\pylon 4\pylon\lib\x64;C:\Program Files\Basler\pylon 4\genicam\library\cpp\lib\win64_x64;$(LibraryPath)</LibraryPath>
+    <LibraryPath>D:\opencv\x64\vc14\lib;D:\ZXingWin64\zxing-cpp-master\build\Debug;C:\Program Files\Basler\pylon 4\pylon\lib\x64;C:\Program Files\Basler\pylon 4\genicam\library\cpp\lib\win64_x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>D:\opencv\include;D:\ZBar\include;C:\Program Files\Basler\pylon 4\genicam\library\cpp\include;C:\Program Files\Basler\pylon 4\pylon\include;D:\ZXingWin64\zxing-cpp-master\core\src;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\opencv\x64\vc14\lib;D:\ZBar\lib;C:\Program Files\Basler\pylon 4\genicam\library\cpp\lib\win64_x64;C:\Program Files\Basler\pylon 4\pylon\lib\x64;D:\ZXingWin64\zxing-cpp-master\build\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -123,7 +125,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libzxing-debug.lib;opencv_world400d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -176,6 +178,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>libzbar64-0.lib;libzxing.lib;opencv_world400.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -222,9 +225,6 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\MyOpenCVApplication.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="..\..\..\ZXingWin64\zxing-cpp-master\build\Debug\libzxing-debug.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

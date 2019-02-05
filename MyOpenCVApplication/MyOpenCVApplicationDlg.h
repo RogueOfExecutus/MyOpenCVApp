@@ -263,4 +263,8 @@ public:
 private:
 	cv::Mat knnData;
 	cv::Mat knnLabels;
+	// ÌØÕ÷¿ò¼Ü
+	void ShowMethodThirtySix();
+	// ÌØÕ÷¿ò¼Ü
+	void HideMethodThirtySix();
 };

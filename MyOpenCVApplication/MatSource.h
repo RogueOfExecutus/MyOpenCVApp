@@ -18,8 +18,7 @@
 #define __MAT_SOURCE_H_
 
 #include <zxing/LuminanceSource.h>
-#include <opencv2/core/core.hpp>
-#include <opencv2/core/core_c.h>
+#include <opencv2/core.hpp>
 
 class MatSource : public zxing::LuminanceSource {
 private:

@@ -169,6 +169,9 @@ public:
 	// 端子检测
 	void UseBlocksChecker(const Mat& I, Mat& J, int offset);
 	// 特征点检测
-	void UseFeatureDetector(const Mat& I, Mat& J);
+	void UseFeatureDetector(const Mat& I, Mat& K, Mat& J, int method);
+	// 透视变换
+	void UsePerspectiveTransform(const Mat& I, Mat& J, double& t);
+	void UseBlocksChecker2(const Mat& I, Mat& J, Mat& templ);
 };
 
